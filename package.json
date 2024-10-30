@@ -44,6 +44,9 @@
       }
     ]
   },
+  "repository": {
+    "url": "https://github.com/sugoroku-y/svg-preview-on-code.git"
+  },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
