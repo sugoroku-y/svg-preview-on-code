@@ -112,7 +112,17 @@ export function* svgPreviewDecorations(
           }
         }
         const config = vscode.workspace.getConfiguration('svg-preview-on-code');
-        const currentColor = config.get<string>('currentColor');
+        const currentColor = config.get<string>('currentColor') ?? (() => {
+          switch (vscode.window.activeColorTheme.kind) {
+            case vscode.ColorThemeKind.Dark:
+            case vscode.ColorThemeKind.HighContrast:
+              return 'white';
+            case vscode.ColorThemeKind.Light:
+            case vscode.ColorThemeKind.HighContrastLight:
+              return 'black';
+          }
+          return undefined;
+        })();
         if (typeof currentColor === 'string') {
           svgAttributes.$$style = `color: ${currentColor};${
             svgAttributes.$$style ?? ''

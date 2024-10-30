@@ -44,3 +44,5 @@ This extension contributes the following settings:
   Specifies the color to draw the area in the svg where currentColor is specified.
   
   svg内でcurrentColorが指定された箇所を描画する色を指定します。
+
+  省略した場合、ダークモードのときには白、ライトモードのときには黒を使用します。
