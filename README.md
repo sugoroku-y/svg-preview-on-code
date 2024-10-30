@@ -39,7 +39,7 @@ This extension contributes the following settings:
   
   プレビューのサイズを指定します。省略時には50ピクセルになります。
 
-- svg-preview-on-code.currentColor
+- `svg-preview-on-code.currentColor`
 
   Specifies the color to draw the area in the svg where currentColor is specified.
   
