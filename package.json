@@ -17,6 +17,7 @@
     "configuration": [
       {
         "title": "SVG Preview on code",
+        "markdownDescription": "Settings that control the behavior of the SVG Preview on code.",
         "properties": {
           "svg-preview-on-code.preset": {
             "type": [
@@ -24,7 +25,7 @@
               "null"
             ],
             "default": null,
-            "description": "Attributes that are set by default for svg elements.\nIf there are properties that are reflected even if they are not specified in the attribute due to CSS or other reasons, they should be described.\nsvg要素にデフォルトで設定される属性です。\nCSSなどにより属性に指定していなくても反映されるプロパティがあれば記述します。"
+            "markdownDescription": "Attributes that are set by default for svg elements.\n\nIf there are properties that are reflected even if they are not specified in the attribute due to CSS or other reasons, they should be described.\n\nsvg要素にデフォルトで設定される属性です。\n\nCSSなどにより属性に指定していなくても反映されるプロパティがあれば記述します。\n\nex)\n```json\n\"svg-preview-on-code.preset\": {\n  \"fill\": \"none\",\n  \"stroke\": \"currentColor\",\n  \"stroke-width\": \"2\",\n  \"stroke-linecap\": \"round\",\n  \"stroke-linejoin\": \"round\",\n}\n```\n"
           },
           "svg-preview-on-code.size": {
             "type": [
@@ -32,13 +33,13 @@
               "null"
             ],
             "default": null,
-            "description": "Specifies the size of the preview. If omitted, it will be 50 pixels.\nプレビューのサイズを指定します。省略時には50ピクセルになります。"
+            "markdownDescription": "Specifies the size of the preview. If omitted, it will be 50 pixels.\n\nプレビューのサイズを指定します。省略時には50ピクセルになります。"
           },
           "svg-preview-on-code.currentColor": {
             "type": "string",
             "default": "",
             "pattern": "^(#[0-9a-fA-F]{6})|(rgb\\(\\s*(25[0-5]|2[0-4]\\d|1\\d{2}|\\d{1,2})\\s*,\\s*(25[0-5]|2[0-4]\\d|1\\d{2}|\\d{1,2})\\s*,\\s*(25[0-5]|2[0-4]\\d|1\\d{2}|\\d{1,2})\\s*\\))|(rgba\\(\\s*(25[0-5]|2[0-4]\\d|1\\d{2}|\\d{1,2})\\s*,\\s*(25[0-5]|2[0-4]\\d|1\\d{2}|\\d{1,2})\\s*,\\s*(25[0-5]|2[0-4]\\d|1\\d{2}|\\d{1,2})\\s*,\\s*[01](\\.\\d+)?\\s*\\))?$",
-            "description": "Specifies the color to draw the area in the svg where currentColor is specified.\nsvg内でcurrentColorが指定された箇所を描画する色を指定します。"
+            "markdownDescription": "Specifies the color to draw the area in the svg where currentColor is specified. If omitted, black is used in dark mode and white in light mode.\n\nsvg内でcurrentColorが指定された箇所を描画する色を指定します。省略時にはダークモードでは黒、ライトモードでは白を使用します。"
           }
         }
       }
