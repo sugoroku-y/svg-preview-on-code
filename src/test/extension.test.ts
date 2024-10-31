@@ -91,7 +91,13 @@ suite('Extension Test Suite', () => {
 		</svg>
 	`);
 
-    const decorations = [...svgPreviewDecorations(document, 50)];
+    const decorations = [
+      ...svgPreviewDecorations(document, {
+        size: 50,
+        currentColor: 'white',
+        currentMode: 'dark',
+      }),
+    ];
     assert.equal(decorations.length, 1);
     assert.ok(decorations[0].hoverMessage instanceof vscode.MarkdownString);
     assert.match(

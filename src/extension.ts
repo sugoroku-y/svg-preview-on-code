@@ -42,12 +42,27 @@ export function activate(context: vscode.ExtensionContext) {
     if (!editor) {
       return;
     }
-    const size =
-      vscode.workspace
-        .getConfiguration('svg-preview-on-code')
-        .get<number>('size') ?? 50;
+    const currentMode = (() => {
+      switch (vscode.window.activeColorTheme.kind) {
+        case vscode.ColorThemeKind.Dark:
+        case vscode.ColorThemeKind.HighContrast:
+          return 'dark';
+      }
+      return 'light';
+    })();
+    const config = vscode.workspace.getConfiguration('svg-preview-on-code');
+    const currentColor =
+      config.get<string>('currentColor') ??
+      (currentMode === 'dark' ? 'white' : 'black');
+    const preset = config.get<Record<string, unknown>>('preset');
+    const size = config.get<number>('size') ?? 50;
     editor.setDecorations(decorationType, [
-      ...svgPreviewDecorations(editor.document, size),
+      ...svgPreviewDecorations(editor.document, {
+        size,
+        preset,
+        currentColor,
+        currentMode,
+      }),
     ]);
   }
   function resetTimeout() {
@@ -72,30 +87,24 @@ const builder = new XMLBuilder({
   attributeNamePrefix: '$$',
 });
 
-function isDarkMode() {
-  switch (vscode.window.activeColorTheme.kind) {
-    case vscode.ColorThemeKind.Dark:
-    case vscode.ColorThemeKind.HighContrast:
-      return true;
-  }
-  return false;
-}
 const IgnoreError = {};
+
+interface VSCodeConfiguration {
+  size: number;
+  preset?: object;
+  currentColor: string;
+  currentMode: 'dark' | 'light';
+}
 
 export function* svgPreviewDecorations(
   document: vscode.TextDocument,
-  size: number,
+  { size, preset, currentColor, currentMode }: VSCodeConfiguration,
 ): Generator<vscode.DecorationOptions, void, undefined> {
-  const currentMode = isDarkMode() ? 'dark' : 'light';
   const previous = urlCache.get(document);
   // モードが変わったらキャッシュは使わない
   const previousMap = previous?.mode === currentMode ? previous.map : undefined;
   const nextMap = new Map<string, string>();
   let comingNew = false;
-  const config = vscode.workspace.getConfiguration('svg-preview-on-code');
-  const currentColor =
-    config.get<string>('currentColor') ?? (isDarkMode() ? 'white' : 'black');
-  const preset = config.get<Record<string, unknown>>('preset');
   for (const { index, 0: match } of document
     .getText()
     .matchAll(
