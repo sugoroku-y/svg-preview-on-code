@@ -151,9 +151,7 @@ export function* svgPreviewDecorations(
             svgAttributes.$$height = size;
           }
         }
-        svgAttributes.$$style = `color: ${currentColor};${
-          svgAttributes.$$style ?? ''
-        }`;
+        svgAttributes.$$color = currentColor;
         if (preset) {
           for (const [name, value] of Object.entries(preset)) {
             svgAttributes[`$$${name}`] ??= value;
