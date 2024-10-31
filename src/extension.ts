@@ -156,7 +156,7 @@ export function* svgPreviewDecorations(
         const newUrl = `data:image/svg+xml;base64,${Buffer.from(
           builder.build(svg),
         ).toString('base64')}`;
-        // 精製した画像はキャッシュしておく
+        // 生成した画像URLはキャッシュしておく
         nextMap.set(match, newUrl);
         comingNew = true;
         return newUrl;
