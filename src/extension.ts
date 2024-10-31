@@ -1,7 +1,10 @@
 import * as vscode from 'vscode';
 import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 
-const urlCache = new WeakMap<vscode.TextDocument, Map<string, string>>();
+const urlCache = new WeakMap<
+  vscode.TextDocument,
+  { mode: 'dark' | 'light'; map: Map<string, string> }
+>();
 
 export function activate(context: vscode.ExtensionContext) {
   let timeout: NodeJS.Timeout | undefined;
@@ -30,6 +33,9 @@ export function activate(context: vscode.ExtensionContext) {
     null,
     context.subscriptions,
   );
+  vscode.window.onDidChangeActiveColorTheme(() => {
+    update(vscode.window.activeTextEditor);
+  });
 
   function update(editor: vscode.TextEditor | null | undefined) {
     resetTimeout();
@@ -66,13 +72,29 @@ const builder = new XMLBuilder({
   attributeNamePrefix: '$$',
 });
 
+function isDarkMode() {
+  switch (vscode.window.activeColorTheme.kind) {
+    case vscode.ColorThemeKind.Dark:
+    case vscode.ColorThemeKind.HighContrast:
+      return true;
+  }
+  return false;
+}
+
 export function* svgPreviewDecorations(
   document: vscode.TextDocument,
   size: number,
 ): Generator<vscode.DecorationOptions, void, undefined> {
-  const previousMap = urlCache.get(document);
+  const currentMode = isDarkMode() ? 'dark' : 'light';
+  const previous = urlCache.get(document);
+  // モードが変わったらキャッシュは使わない
+  const previousMap = previous?.mode === currentMode ? previous.map : undefined;
   const nextMap = new Map<string, string>();
   let comingNew = false;
+  const config = vscode.workspace.getConfiguration('svg-preview-on-code');
+  const currentColor =
+    config.get<string>('currentColor') ?? (isDarkMode() ? 'white' : 'black');
+  const preset = config.get<Record<string, unknown>>('preset');
   for (const { index, 0: match } of document
     .getText()
     .matchAll(
@@ -112,28 +134,13 @@ export function* svgPreviewDecorations(
             svgAttributes.$$height = size;
           }
         }
-        const config = vscode.workspace.getConfiguration('svg-preview-on-code');
-        const currentColor =
-          config.get<string>('currentColor') ??
-          (() => {
-            switch (vscode.window.activeColorTheme.kind) {
-              case vscode.ColorThemeKind.Dark:
-              case vscode.ColorThemeKind.HighContrast:
-                return 'white';
-              case vscode.ColorThemeKind.Light:
-              case vscode.ColorThemeKind.HighContrastLight:
-                return 'black';
-            }
-            return undefined;
-          })();
-        if (typeof currentColor === 'string') {
-          svgAttributes.$$style = `color: ${currentColor};${
-            svgAttributes.$$style ?? ''
-          }`;
-        }
-        const preset = config.get<Record<string, unknown>>('preset');
-        for (const [name, value] of Object.entries(preset || {})) {
-          svgAttributes[`$$${name}`] ??= value;
+        svgAttributes.$$style = `color: ${currentColor};${
+          svgAttributes.$$style ?? ''
+        }`;
+        if (preset) {
+          for (const [name, value] of Object.entries(preset)) {
+            svgAttributes[`$$${name}`] ??= value;
+          }
         }
 
         const newUrl = `data:image/svg+xml;base64,${Buffer.from(
@@ -156,7 +163,7 @@ export function* svgPreviewDecorations(
   if (nextMap.size) {
     if (comingNew || nextMap.size !== previousMap?.size) {
       // 変化があったときだけ更新
-      urlCache.set(document, nextMap);
+      urlCache.set(document, { mode: currentMode, map: nextMap });
     }
   } else if (previousMap) {
     // ひとつも無くなったら削除
