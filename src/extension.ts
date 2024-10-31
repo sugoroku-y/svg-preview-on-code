@@ -80,6 +80,7 @@ function isDarkMode() {
   }
   return false;
 }
+const IgnoreError = {};
 
 export function* svgPreviewDecorations(
   document: vscode.TextDocument,
@@ -116,13 +117,10 @@ export function* svgPreviewDecorations(
           try {
             return parser.parse(match);
           } catch {
-            // エラーが発生しても握りつぶす
-            return undefined;
+            // ここでは無視するエラーに置き換えて投げ直す
+            throw IgnoreError;
           }
         })();
-        if (!svg) {
-          return undefined;
-        }
         const svgAttributes = svg[0][':@'];
         const w = Number(svgAttributes.$$width);
         const h = Number(svgAttributes.$$height);
@@ -161,17 +159,16 @@ export function* svgPreviewDecorations(
         comingNew = true;
         return newUrl;
       })();
-      if (!url) {
-        continue;
-      }
       const decoration = {
         range: new vscode.Range(start, end),
         hoverMessage: new vscode.MarkdownString(`![](${url}|width=${size})`),
       } satisfies vscode.DecorationOptions;
       yield decoration;
     } catch (ex) {
-      // エラーが発生してもログに出すだけにする
-      console.error(ex);
+      if (ex !== IgnoreError) {
+        // エラーが発生してもログに出すだけにする
+        console.error(ex);
+      }
     }
   }
   if (nextMap.size) {
