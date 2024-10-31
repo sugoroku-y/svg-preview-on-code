@@ -112,7 +112,17 @@ export function* svgPreviewDecorations(
           nextMap.set(match, cached);
           return cached;
         }
-        const svg = parser.parse(match);
+        const svg = (() => {
+          try {
+            return parser.parse(match);
+          } catch {
+            // エラーが発生しても握りつぶす
+            return undefined;
+          }
+        })();
+        if (!svg) {
+          return undefined;
+        }
         const svgAttributes = svg[0][':@'];
         const w = Number(svgAttributes.$$width);
         const h = Number(svgAttributes.$$height);
@@ -151,13 +161,17 @@ export function* svgPreviewDecorations(
         comingNew = true;
         return newUrl;
       })();
+      if (!url) {
+        continue;
+      }
       const decoration = {
         range: new vscode.Range(start, end),
         hoverMessage: new vscode.MarkdownString(`![](${url}|width=${size})`),
       } satisfies vscode.DecorationOptions;
       yield decoration;
-    } catch {
-      // エラーが発生しても握りつぶす
+    } catch (ex) {
+      // エラーが発生してもログに出すだけにする
+      console.error(ex);
     }
   }
   if (nextMap.size) {
@@ -165,7 +179,7 @@ export function* svgPreviewDecorations(
       // 変化があったときだけ更新
       urlCache.set(document, { mode: currentMode, map: nextMap });
     }
-  } else if (previousMap) {
+  } else if (previous) {
     // ひとつも無くなったら削除
     urlCache.delete(document);
   }
