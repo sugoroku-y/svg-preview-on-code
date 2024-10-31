@@ -166,11 +166,11 @@ export function* svgPreviewDecorations(
         comingNew = true;
         return newUrl;
       })();
-      const decoration = {
-        range: new vscode.Range(start, end),
-        hoverMessage: new vscode.MarkdownString(`![](${url}|width=${size})`),
-      } satisfies vscode.DecorationOptions;
-      yield decoration;
+      const range = new vscode.Range(start, end);
+      const hoverMessage = new vscode.MarkdownString();
+      hoverMessage.supportHtml = true;
+      hoverMessage.appendMarkdown(`<img src="${url}" width="${size}">`);
+      yield { range, hoverMessage };
     } catch (ex) {
       if (ex !== IgnoreError) {
         // エラーが発生してもログに出すだけにする
