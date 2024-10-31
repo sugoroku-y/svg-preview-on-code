@@ -72,6 +72,7 @@ export function* svgPreviewDecorations(
 ): Generator<vscode.DecorationOptions, void, undefined> {
   const previousMap = urlCache.get(document);
   const nextMap = new Map<string, string>();
+  let comingNew = false;
   for (const { index, 0: match } of document
     .getText()
     .matchAll(
@@ -140,6 +141,7 @@ export function* svgPreviewDecorations(
         ).toString('base64')}`;
         // 精製した画像はキャッシュしておく
         nextMap.set(match, newUrl);
+        comingNew = true;
         return newUrl;
       })();
       const decoration = {
@@ -152,8 +154,12 @@ export function* svgPreviewDecorations(
     }
   }
   if (nextMap.size) {
-    urlCache.set(document, nextMap);
+    if (comingNew || nextMap.size !== previousMap?.size) {
+      // 変化があったときだけ更新
+      urlCache.set(document, nextMap);
+    }
   } else if (previousMap) {
+    // ひとつも無くなったら削除
     urlCache.delete(document);
   }
 }
