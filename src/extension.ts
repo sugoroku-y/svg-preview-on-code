@@ -52,7 +52,7 @@ export function activate(context: vscode.ExtensionContext) {
     })();
     const config = vscode.workspace.getConfiguration('svg-preview-on-code');
     const currentColor =
-      config.get<string>('currentColor') ??
+      config.get<string>('currentColor') ||
       (currentMode === 'dark' ? 'white' : 'black');
     const preset = config.get<Record<string, unknown>>('preset');
     const size = config.get<number>('size') ?? 50;
