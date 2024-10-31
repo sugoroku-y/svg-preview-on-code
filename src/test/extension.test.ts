@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import {svgPreviewDecorations} from '../extension';
+import { svgPreviewDecorations } from '../extension';
 
 class MockTextDocument implements vscode.TextDocument {
   uri!: vscode.Uri;
@@ -26,7 +26,7 @@ class MockTextDocument implements vscode.TextDocument {
     const line = this.lines[lineNumber] + '\n';
     const range = new vscode.Range(
       new vscode.Position(lineNumber, 0),
-      new vscode.Position(lineNumber, line.length + 1)
+      new vscode.Position(lineNumber, line.length + 1),
     );
     return new (class implements vscode.TextLine {
       get lineNumber() {
@@ -65,7 +65,7 @@ class MockTextDocument implements vscode.TextDocument {
   }
   getWordRangeAtPosition(
     position: vscode.Position,
-    regex?: RegExp
+    regex?: RegExp,
   ): vscode.Range | undefined {
     throw new Error('Method not implemented.');
   }
@@ -96,7 +96,7 @@ suite('Extension Test Suite', () => {
     assert.ok(decorations[0].hoverMessage instanceof vscode.MarkdownString);
     assert.match(
       (decorations[0].hoverMessage as vscode.MarkdownString).value,
-      /^!\[\]\(data:image\/svg\+xml;base64,[0-9A-Za-z+/]+=*\)$/
+      /^!\[\]\(data:image\/svg\+xml;base64,[0-9A-Za-z+/]+=*\)$/,
     );
     assert.equal(decorations[0].range.start.line, 1);
     assert.equal(decorations[0].range.start.character, 2);

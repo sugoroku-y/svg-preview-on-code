@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import {XMLParser, XMLBuilder} from 'fast-xml-parser';
+import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 
 const urlCache = new WeakMap<vscode.TextDocument, Map<string, string>>();
 
@@ -11,10 +11,10 @@ export function activate(context: vscode.ExtensionContext) {
   vscode.window.onDidChangeActiveTextEditor(
     update,
     null,
-    context.subscriptions
+    context.subscriptions,
   );
   vscode.workspace.onDidChangeTextDocument(
-    ev => {
+    (ev) => {
       const editor = vscode.window.activeTextEditor;
       if (!editor) {
         return;
@@ -28,7 +28,7 @@ export function activate(context: vscode.ExtensionContext) {
       }, 500);
     },
     null,
-    context.subscriptions
+    context.subscriptions,
   );
 
   function update(editor: vscode.TextEditor | null | undefined) {
@@ -68,14 +68,14 @@ const builder = new XMLBuilder({
 
 export function* svgPreviewDecorations(
   document: vscode.TextDocument,
-  size: number
+  size: number,
 ): Generator<vscode.DecorationOptions, void, undefined> {
   const previousMap = urlCache.get(document);
   const nextMap = new Map<string, string>();
-  for (const {index, 0: match} of document
+  for (const { index, 0: match } of document
     .getText()
     .matchAll(
-      /<svg.*?>.*?<\/svg>|\bdata:image\/\w+(?:\+\w+)?;base64,(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?/gs
+      /<svg.*?>.*?<\/svg>|\bdata:image\/\w+(?:\+\w+)?;base64,(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?/gs,
     )) {
     const start = document.positionAt(index);
     const end = document.positionAt(index + match.length);
@@ -112,17 +112,19 @@ export function* svgPreviewDecorations(
           }
         }
         const config = vscode.workspace.getConfiguration('svg-preview-on-code');
-        const currentColor = config.get<string>('currentColor') ?? (() => {
-          switch (vscode.window.activeColorTheme.kind) {
-            case vscode.ColorThemeKind.Dark:
-            case vscode.ColorThemeKind.HighContrast:
-              return 'white';
-            case vscode.ColorThemeKind.Light:
-            case vscode.ColorThemeKind.HighContrastLight:
-              return 'black';
-          }
-          return undefined;
-        })();
+        const currentColor =
+          config.get<string>('currentColor') ??
+          (() => {
+            switch (vscode.window.activeColorTheme.kind) {
+              case vscode.ColorThemeKind.Dark:
+              case vscode.ColorThemeKind.HighContrast:
+                return 'white';
+              case vscode.ColorThemeKind.Light:
+              case vscode.ColorThemeKind.HighContrastLight:
+                return 'black';
+            }
+            return undefined;
+          })();
         if (typeof currentColor === 'string') {
           svgAttributes.$$style = `color: ${currentColor};${
             svgAttributes.$$style ?? ''
@@ -134,7 +136,7 @@ export function* svgPreviewDecorations(
         }
 
         const newUrl = `data:image/svg+xml;base64,${Buffer.from(
-          builder.build(svg)
+          builder.build(svg),
         ).toString('base64')}`;
         // 精製した画像はキャッシュしておく
         nextMap.set(match, newUrl);
