@@ -34,6 +34,34 @@ This extension contributes the following settings:
 
   CSSなどにより属性に指定していなくても反映されるプロパティがあれば記述します。
 
+  For example, if you specify the following in CSS:
+
+  たとえばCSSで以下のように指定している場合:
+
+  ```css
+  svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  ```
+
+  If you specify the following in `svg-preview-on-code.preset`, it will be displayed almost like the actual one:
+
+  `svg-preview-on-code.preset`に以下のように指定するとほぼ実際のものと同じように表示されます。
+
+  ```json
+  "svg-preview-on-code.preset": {
+    "fill": "none",
+    "stroke": "currentColor",
+    "stroke-width": "2",
+    "stroke-linecap": "round",
+    "stroke-linejoin": "round"
+  }
+  ```
+
 - `svg-preview-on-code.size`:
 
   Specifies the size of the preview. If omitted, it will be 50 pixels.
