@@ -90,9 +90,13 @@ const builder = new XMLBuilder({
 const IgnoreError = {};
 
 interface VSCodeConfiguration {
+  /** プレビューのサイズ。 svg-preview-on-code.sizeの設定値。 */
   size: number;
+  /** svg要素に追加する属性。svg-preview-on-code.presetの設定値。 */
   preset?: object;
+  /** svg要素のcolor属性に指定する値。svg-preview-on-code.currentColorの設定値。 */
   currentColor: string;
+  /** VS Codeがダークモードであれば`'dark'`、ライトモードであれば`'light'`。 */
   currentMode: 'dark' | 'light';
 }
 
@@ -114,10 +118,11 @@ export function* svgPreviewDecorations(
     const end = document.positionAt(index + match.length);
     try {
       const url = (() => {
+        // dataスキームはそのまま使用
         if (match.startsWith('data:')) {
           return match;
         }
-        // タグ前後の空白を除去
+        // タグ前後の空白を除去したものをキャッシュのキーにする
         const normalized = match.replace(/(?<=>)\s+|\s+(?=<)/g, '');
         // キャッシュにあればそちらを使う
         const cached = previousMap?.get(normalized);
@@ -125,15 +130,18 @@ export function* svgPreviewDecorations(
           nextMap.set(normalized, cached);
           return cached;
         }
+        // 無ければsvgをparse
         const svg = (() => {
           try {
             return parser.parse(normalized);
           } catch {
-            // ここでは無視するエラーに置き換えて投げ直す
+            // parseで発生するエラーは無視するエラーに置き換えて投げ直す
             throw IgnoreError;
           }
         })();
+        // ルートsvg要素の属性だけを操作する
         const svgAttributes = svg[0][':@'];
+        // currentColorに使用される色を指定する
         svgAttributes.$$color = currentColor;
         if (preset) {
           for (const [name, value] of Object.entries(preset)) {
@@ -144,7 +152,7 @@ export function* svgPreviewDecorations(
             svgAttributes[`$$${name}`] ??= value;
           }
         }
-
+        // Base64エンコードしてDataスキームURIにする
         const newUrl = `data:image/svg+xml;base64,${Buffer.from(
           builder.build(svg),
         ).toString('base64')}`;
@@ -153,7 +161,9 @@ export function* svgPreviewDecorations(
         comingNew = true;
         return newUrl;
       })();
+      // svgもしくはDataスキームURIの範囲にプレビューを追加
       const range = new vscode.Range(start, end);
+      // supportHtmlを有効にしてimgタグをMarkdown文字列として追加
       const hoverMessage = new vscode.MarkdownString();
       hoverMessage.supportHtml = true;
       hoverMessage.appendMarkdown(`<img src="${url}" height="${size}">`);
