@@ -59,7 +59,18 @@ export function activate(context: vscode.ExtensionContext) {
     editor.setDecorations(decorationType, [
       ...svgPreviewDecorations(editor.document, {
         size,
-        preset,
+        preset: preset
+          ? Object.entries(preset)
+              .filter(([name]) =>
+                // aaaもしくはaaa-bbb形式の属性のみ受け付ける
+                /^[a-z][a-z0-9]*(?:-[a-z][a-z0-9]*)*$/.test(name),
+              )
+              .map(([name, value]) => [
+                // fast-xml-parserの仕様で
+                `$$${name}`,
+                value,
+              ])
+          : [],
         currentColor,
         currentMode,
       }),
@@ -92,8 +103,8 @@ const IgnoreError = {};
 interface VSCodeConfiguration {
   /** プレビューのサイズ。 svg-preview-on-code.sizeの設定値。 */
   size: number;
-  /** svg要素に追加する属性。svg-preview-on-code.presetの設定値。 */
-  preset?: object;
+  /** svg要素に追加する属性。svg-preview-on-code.presetの設定値からfast-xml-parserの属性名と値の配列に変換したもの。 */
+  preset: [string, unknown][];
   /** svg要素のcolor属性に指定する値。svg-preview-on-code.currentColorの設定値。 */
   currentColor: string;
   /** VS Codeがダークモードであれば`'dark'`、ライトモードであれば`'light'`。 */
@@ -151,14 +162,9 @@ export function* svgPreviewDecorations(
         }
         // currentColorに使用される色を指定する
         svgAttributes.$$color ??= currentColor;
-        if (preset) {
-          for (const [name, value] of Object.entries(preset)) {
-            if (!/^[a-z][a-z0-9]*(?:-[a-z][a-z0-9]*)*$/.test(name)) {
-              // aaaもしくはaaa-bbb形式の属性のみ受け付ける
-              continue;
-            }
-            svgAttributes[`$$${name}`] ??= value;
-          }
+        // svg要素に属性を追加
+        for (const [name, value] of preset) {
+          svgAttributes[name] ??= value;
         }
         // Base64エンコードしてDataスキームURIにする
         const newUrl = `data:image/svg+xml;base64,${Buffer.from(

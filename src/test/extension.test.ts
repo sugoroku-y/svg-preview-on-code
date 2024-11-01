@@ -96,6 +96,7 @@ suite('Extension Test Suite', () => {
         size: 50,
         currentColor: 'white',
         currentMode: 'dark',
+        preset: [],
       }),
     ];
     assert.equal(decorations.length, 1);
