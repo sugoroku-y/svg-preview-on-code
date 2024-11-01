@@ -51,26 +51,13 @@ export function activate(context: vscode.ExtensionContext) {
       return 'light';
     })();
     const config = vscode.workspace.getConfiguration('svg-preview-on-code');
-    const currentColor =
-      config.get<string>('currentColor') ||
-      (currentMode === 'dark' ? 'white' : 'black');
+    const currentColor = config.get<string>('currentColor');
     const preset = config.get<Record<string, unknown>>('preset');
-    const size = config.get<number>('size') ?? 50;
+    const size = config.get<number>('size');
     editor.setDecorations(decorationType, [
       ...svgPreviewDecorations(editor.document, {
         size,
-        preset: preset
-          ? Object.entries(preset)
-              .filter(([name]) =>
-                // aaaもしくはaaa-bbb形式の属性のみ受け付ける
-                /^[a-z][a-z0-9]*(?:-[a-z][a-z0-9]*)*$/.test(name),
-              )
-              .map(([name, value]) => [
-                // fast-xml-parserの仕様で
-                `$$${name}`,
-                value,
-              ])
-          : [],
+        preset,
         currentColor,
         currentMode,
       }),
@@ -101,20 +88,56 @@ const builder = new XMLBuilder({
 const IgnoreError = {};
 
 interface VSCodeConfiguration {
-  /** プレビューのサイズ。 svg-preview-on-code.sizeの設定値。 */
-  size: number;
-  /** svg要素に追加する属性。svg-preview-on-code.presetの設定値からfast-xml-parserの属性名と値の配列に変換したもの。 */
-  preset: [string, unknown][];
-  /** svg要素のcolor属性に指定する値。svg-preview-on-code.currentColorの設定値。 */
-  currentColor: string;
-  /** VS Codeがダークモードであれば`'dark'`、ライトモードであれば`'light'`。 */
+  /**
+   * VS Codeがダークモードであれば`'dark'`、ライトモードであれば`'light'`。
+   */
   currentMode: 'dark' | 'light';
+  /**
+   * プレビューのサイズ。 svg-preview-on-code.sizeの設定値。
+   * @default 50
+   */
+  size?: number;
+  /**
+   * svg要素に追加する属性。svg-preview-on-code.presetの設定値。
+   */
+  preset?: object;
+  /**
+   * svg要素のcolor属性に指定する値。svg-preview-on-code.currentColorの設定値。
+   * @default ダークモードであれば`'white'`、ライトモードであれば`'black'`
+   */
+  currentColor?: string;
 }
 
 export function* svgPreviewDecorations(
   document: vscode.TextDocument,
-  { size, preset, currentColor, currentMode }: VSCodeConfiguration,
+  { size, preset: _preset, currentMode, currentColor }: VSCodeConfiguration,
 ): Generator<vscode.DecorationOptions, void, undefined> {
+  const preset: Record<string, string | number> | undefined = _preset
+    ? Object.fromEntries(
+        [
+          [
+            // currentColorに使用される色を指定する
+            '$$color',
+            currentColor || (currentMode === 'dark' ? 'white' : 'black'),
+          ],
+        ].concat(
+          Object.entries(_preset).flatMap(([name, value]) =>
+            // aaaもしくはaaa-bbb形式の属性のみ受け付ける
+            /^[a-z][a-z0-9]*(?:-[a-z][a-z0-9]*)*$/.test(name) &&
+            // 値は文字列/数値のみ
+            ['string', 'number'].includes(typeof value)
+              ? [
+                  [
+                    // fast-xml-parserの仕様で
+                    `$$${name}`,
+                    value,
+                  ],
+                ]
+              : [],
+          ),
+        ),
+      )
+    : undefined;
   const previous = urlCache.get(document);
   // モードが変わったらキャッシュは使わない
   const previousMap = previous?.mode === currentMode ? previous.map : undefined;
@@ -160,12 +183,12 @@ export function* svgPreviewDecorations(
           // 名前空間がSVGのものでなければ無視する
           throw IgnoreError;
         }
-        // currentColorに使用される色を指定する
-        svgAttributes.$$color ??= currentColor;
-        // svg要素に属性を追加
-        for (const [name, value] of preset) {
-          svgAttributes[name] ??= value;
-        }
+        svg[0][':@'] = {
+          // svg要素に属性を追加
+          ...preset,
+          // 元々指定されている属性が優先
+          ...svgAttributes,
+        };
         // Base64エンコードしてDataスキームURIにする
         const newUrl = `data:image/svg+xml;base64,${Buffer.from(
           builder.build(svg),
@@ -180,7 +203,7 @@ export function* svgPreviewDecorations(
       // supportHtmlを有効にしてimgタグをMarkdown文字列として追加
       const hoverMessage = new vscode.MarkdownString();
       hoverMessage.supportHtml = true;
-      hoverMessage.appendMarkdown(`<img src="${url}" height="${size}">`);
+      hoverMessage.appendMarkdown(`<img src="${url}" height="${size ?? 50}">`);
       yield { range, hoverMessage };
     } catch (ex) {
       // 生成失敗したこともキャッシュする
