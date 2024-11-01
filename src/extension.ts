@@ -137,6 +137,10 @@ export function* svgPreviewDecorations(
         svgAttributes.$$color = currentColor;
         if (preset) {
           for (const [name, value] of Object.entries(preset)) {
+            if (!/^[a-z][a-z0-9]*(?:-[a-z][a-z0-9]*)*$/.test(name)) {
+              // aaaもしくはaaa-bbb形式の属性のみ受け付ける
+              continue;
+            }
             svgAttributes[`$$${name}`] ??= value;
           }
         }
