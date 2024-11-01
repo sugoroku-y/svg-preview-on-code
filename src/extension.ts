@@ -114,6 +114,8 @@ export function* svgPreviewDecorations(
     .matchAll(
       /<svg.*?>.*?<\/svg>|\bdata:image\/\w+(?:\+\w+)?;base64,(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?/gs,
     )) {
+    // タグ前後の空白を除去したものをキャッシュのキーにする
+    const normalized = match.replace(/(?<=>)\s+|\s+(?=<)/g, '');
     const start = document.positionAt(index);
     const end = document.positionAt(index + match.length);
     try {
@@ -122,11 +124,13 @@ export function* svgPreviewDecorations(
         if (match.startsWith('data:')) {
           return match;
         }
-        // タグ前後の空白を除去したものをキャッシュのキーにする
-        const normalized = match.replace(/(?<=>)\s+|\s+(?=<)/g, '');
         // キャッシュにあればそちらを使う
         const cached = previousMap?.get(normalized);
         if (cached) {
+          if (cached === 'error') {
+            // 前回何らかの問題があったものは最初からエラーにする
+            throw IgnoreError;
+          }
           nextMap.set(normalized, cached);
           return cached;
         }
@@ -141,6 +145,10 @@ export function* svgPreviewDecorations(
         })();
         // ルートsvg要素の属性だけを操作する
         const svgAttributes = svg[0][':@'];
+        if (svgAttributes.$$xmlns !== 'http://www.w3.org/2000/svg') {
+          // 名前空間がSVGのものでなければ無視する
+          throw IgnoreError;
+        }
         // currentColorに使用される色を指定する
         svgAttributes.$$color = currentColor;
         if (preset) {
@@ -169,8 +177,11 @@ export function* svgPreviewDecorations(
       hoverMessage.appendMarkdown(`<img src="${url}" height="${size}">`);
       yield { range, hoverMessage };
     } catch (ex) {
+      // 生成失敗したこともキャッシュする
+      nextMap.set(normalized, 'error');
+      comingNew = true;
       if (ex !== IgnoreError) {
-        // エラーが発生してもログに出すだけにする
+        // 無視するエラーでなくてもログに出すだけ
         console.error(ex);
       }
     }
