@@ -117,14 +117,17 @@ export function* svgPreviewDecorations(
         if (match.startsWith('data:')) {
           return match;
         }
-        const cached = previousMap?.get(match);
+        // タグ前後の空白を除去
+        const normalized = match.replace(/(?<=>)\s+|\s+(?=<)/g, '');
+        // キャッシュにあればそちらを使う
+        const cached = previousMap?.get(normalized);
         if (cached) {
-          nextMap.set(match, cached);
+          nextMap.set(normalized, cached);
           return cached;
         }
         const svg = (() => {
           try {
-            return parser.parse(match);
+            return parser.parse(normalized);
           } catch {
             // ここでは無視するエラーに置き換えて投げ直す
             throw IgnoreError;
@@ -142,7 +145,7 @@ export function* svgPreviewDecorations(
           builder.build(svg),
         ).toString('base64')}`;
         // 生成した画像URLはキャッシュしておく
-        nextMap.set(match, newUrl);
+        nextMap.set(normalized, newUrl);
         comingNew = true;
         return newUrl;
       })();
