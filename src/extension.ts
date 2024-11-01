@@ -131,26 +131,6 @@ export function* svgPreviewDecorations(
           }
         })();
         const svgAttributes = svg[0][':@'];
-        const w = Number(svgAttributes.$$width);
-        const h = Number(svgAttributes.$$height);
-        if (!w) {
-          if (!h) {
-            svgAttributes.$$width = size;
-            svgAttributes.$$height = size;
-          } else {
-            svgAttributes.$$width = size;
-          }
-        } else if (!h) {
-          svgAttributes.$$height = size;
-        } else {
-          if (w > h) {
-            svgAttributes.$$width = size;
-            svgAttributes.$$height = `${(h * size) / w}`;
-          } else {
-            svgAttributes.$$width = `${(w * size) / h}`;
-            svgAttributes.$$height = size;
-          }
-        }
         svgAttributes.$$color = currentColor;
         if (preset) {
           for (const [name, value] of Object.entries(preset)) {
@@ -169,7 +149,7 @@ export function* svgPreviewDecorations(
       const range = new vscode.Range(start, end);
       const hoverMessage = new vscode.MarkdownString();
       hoverMessage.supportHtml = true;
-      hoverMessage.appendMarkdown(`<img src="${url}" width="${size}">`);
+      hoverMessage.appendMarkdown(`<img src="${url}" height="${size}">`);
       yield { range, hoverMessage };
     } catch (ex) {
       if (ex !== IgnoreError) {
