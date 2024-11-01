@@ -150,7 +150,7 @@ export function* svgPreviewDecorations(
           throw IgnoreError;
         }
         // currentColorに使用される色を指定する
-        svgAttributes.$$color = currentColor;
+        svgAttributes.$$color ??= currentColor;
         if (preset) {
           for (const [name, value] of Object.entries(preset)) {
             if (!/^[a-z][a-z0-9]*(?:-[a-z][a-z0-9]*)*$/.test(name)) {
