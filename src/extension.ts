@@ -36,6 +36,18 @@ export function activate(context: vscode.ExtensionContext) {
   vscode.window.onDidChangeActiveColorTheme(() => {
     update(vscode.window.activeTextEditor);
   });
+  vscode.workspace.onDidChangeConfiguration((e) => {
+    if (e.affectsConfiguration('svg-preview-on-code')) {
+      for (const editor of vscode.window.visibleTextEditors) {
+        const document = editor.document;
+        if (!urlCache.has(document)) {
+          continue;
+        }
+        urlCache.delete(document);
+        update(editor);
+      }
+    }
+  });
 
   function update(editor: vscode.TextEditor | null | undefined) {
     resetTimeout();
