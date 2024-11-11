@@ -212,8 +212,6 @@ export function* svgPreviewDecorations(
     )) {
     // タグ前後の空白を除去したものをキャッシュのキーにする
     const normalized = match.replace(/(?<=>)\s+|\s+(?=<)/g, '');
-    const start = document.positionAt(index);
-    const end = document.positionAt(index + match.length);
     try {
       const url = (() => {
         // dataスキームはそのまま使用
@@ -261,6 +259,8 @@ export function* svgPreviewDecorations(
         return newUrl;
       })();
       // svgもしくはDataスキームURIの範囲にプレビューを追加
+      const start = document.positionAt(index);
+      const end = document.positionAt(index + match.length);
       const range = new vscode.Range(start, end);
       // supportHtmlを有効にしてimgタグをMarkdown文字列として追加
       const hoverMessage = new vscode.MarkdownString();
