@@ -84,30 +84,37 @@ class MockTextDocument implements vscode.TextDocument {
 suite('Extension Test Suite', () => {
   vscode.window.showInformationMessage('Start all tests.');
 
-  test('Sample test', () => {
-    const document = new MockTextDocument(`
-		<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2">
-			<path d="m0 0l100 100" />
-		</svg>
-	`);
+  test('Sample test', async () => {
+    const text = `
+      <svg xmlns="http://www.w3.org/2000/svg">
+        <path d="m4 4l17 17a4 4 0 0 1 8 8l17 17m-32 0l10-10-5-5 22-22-5-5" />
+      </svg>
+    `;
+    const document = new MockTextDocument(text);
 
     const decorations = [
       ...svgPreviewDecorations(document, {
+        currentMode: 'light',
         size: 50,
-        currentColor: 'white',
-        currentMode: 'dark',
-        preset: [],
       }),
     ];
     assert.equal(decorations.length, 1);
     assert.ok(decorations[0].hoverMessage instanceof vscode.MarkdownString);
-    assert.match(
+    assert.equal(
       (decorations[0].hoverMessage as vscode.MarkdownString).value,
-      /^!\[\]\(data:image\/svg\+xml;base64,[0-9A-Za-z+/]+=*\)$/,
+      `<img src="data:image/svg+xml;base64,${btoa(
+        text
+          .replace(/(?<=>)\s+|\s+(?=<)/g, '')
+          .replace(/(?<=<svg)(?= )/, ' color="black"')
+          .replace(
+            /<(\w+)((?:\s+\w+(?:-\w+)*="[^"]*")*)\s+\/>/g,
+            '<$1$2></$1>',
+          ),
+      )}" height="50">`,
     );
     assert.equal(decorations[0].range.start.line, 1);
-    assert.equal(decorations[0].range.start.character, 2);
+    assert.equal(decorations[0].range.start.character, 6);
     assert.equal(decorations[0].range.end.line, 3);
-    assert.equal(decorations[0].range.end.character, 8);
+    assert.equal(decorations[0].range.end.character, 12);
   });
 });
