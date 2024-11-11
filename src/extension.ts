@@ -1,123 +1,19 @@
 import * as vscode from 'vscode';
 import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 
-const urlCache = new WeakMap<
-  vscode.TextDocument,
-  { mode: 'dark' | 'light'; map: Map<string, string> }
->();
-
-export function activate(context: vscode.ExtensionContext) {
-  let timeout: NodeJS.Timeout | undefined;
-
-  const decorationType = vscode.window.createTextEditorDecorationType({});
-  update(vscode.window.activeTextEditor);
-  vscode.window.onDidChangeActiveTextEditor(
-    update,
-    null,
-    context.subscriptions,
-  );
-  vscode.workspace.onDidChangeTextDocument(
-    (ev) => {
-      const editor = vscode.window.activeTextEditor;
-      if (!editor) {
-        return;
-      }
-      if (ev.document !== editor.document) {
-        return;
-      }
-      resetTimeout();
-      timeout = setTimeout(() => {
-        update(editor);
-      }, 500);
-    },
-    null,
-    context.subscriptions,
-  );
-  vscode.window.onDidChangeActiveColorTheme(() => {
-    update(vscode.window.activeTextEditor);
-  });
-  vscode.workspace.onDidChangeConfiguration((e) => {
-    if (e.affectsConfiguration('svg-preview-on-code')) {
-      for (const editor of vscode.window.visibleTextEditors) {
-        const document = editor.document;
-        if (!urlCache.has(document)) {
-          continue;
-        }
-        urlCache.delete(document);
-        update(editor);
-      }
-    }
-  });
-
-  function update(editor: vscode.TextEditor | null | undefined) {
-    resetTimeout();
-    if (!editor) {
-      return;
-    }
-    const currentMode = (() => {
-      switch (vscode.window.activeColorTheme.kind) {
-        case vscode.ColorThemeKind.Dark:
-        case vscode.ColorThemeKind.HighContrast:
-          return 'dark';
-      }
-      return 'light';
-    })();
-    const config = vscode.workspace.getConfiguration('svg-preview-on-code');
-    const currentColor = config.get<string>('currentColor');
-    const preset = config.get<Record<string, unknown>>('preset');
-    const size = config.get<number>('size');
-    editor.setDecorations(decorationType, [
-      ...svgPreviewDecorations(editor.document, {
-        size,
-        preset,
-        currentColor,
-        currentMode,
-      }),
-    ]);
-  }
-  function resetTimeout() {
-    if (timeout) {
-      clearTimeout(timeout);
-      timeout = undefined;
-    }
-  }
+interface Statics {
+  urlCache: WeakMap<vscode.TextDocument, Map<string, string>>;
+  preset: object;
+  size: number;
 }
 
-export function deactivate() {}
-
-const parser = new XMLParser({
-  preserveOrder: true,
-  ignoreAttributes: false,
-  attributeNamePrefix: '$$',
-});
-
-const builder = new XMLBuilder({
-  preserveOrder: true,
-  ignoreAttributes: false,
-  attributeNamePrefix: '$$',
-});
-
-const IgnoreError = {};
-
-interface VSCodeConfiguration {
-  /**
-   * VS Codeがダークモードであれば`'dark'`、ライトモードであれば`'light'`。
-   */
-  currentMode: 'dark' | 'light';
-  /**
-   * プレビューのサイズ。 svg-preview-on-code.sizeの設定値。
-   * @default 50
-   */
-  size?: number;
-  /**
-   * svg要素に追加する属性。svg-preview-on-code.presetの設定値。
-   */
-  preset?: object;
-  /**
-   * svg要素のcolor属性に指定する値。svg-preview-on-code.currentColorの設定値。
-   * @default ダークモードであれば`'white'`、ライトモードであれば`'black'`
-   */
-  currentColor?: string;
+function darkOrLightMode() {
+  switch (vscode.window.activeColorTheme.kind) {
+    case vscode.ColorThemeKind.Dark:
+    case vscode.ColorThemeKind.HighContrast:
+      return 'dark';
+  }
+  return 'light';
 }
 
 /**
@@ -188,37 +84,131 @@ const SVG_PRESENTATION_ATTRIBUTES = {
   'writing-mode': true,
 } as const;
 
+function resetStatics(): Statics;
+function resetStatics(statics: Statics): void;
+function resetStatics(statics?: Statics): Statics | void {
+  const mode = darkOrLightMode();
+  const config = vscode.workspace.getConfiguration('svg-preview-on-code');
+  const currentColor = config.get<string>('currentColor');
+  const _preset = config.get<Record<string, string | number>>('preset');
+  const size = config.get<number>('size') ?? 50;
+  const urlCache = new WeakMap<vscode.TextDocument, Map<string, string>>();
+  const preset: Record<string, string | number> = Object.fromEntries([
+    [
+      // currentColorに使用される色を指定する
+      '$$color',
+      currentColor || (mode === 'dark' ? 'white' : 'black'),
+    ],
+    ...(_preset
+      ? Object.entries(_preset).flatMap(([name, value]) =>
+          // SVGのプレゼンテーション属性のみ受け付ける
+          name in SVG_PRESENTATION_ATTRIBUTES &&
+          // 値は文字列/数値のみ
+          ['string', 'number'].includes(typeof value)
+            ? [
+                [
+                  // fast-xml-parserに指定したプリフィックスをつける
+                  `$$${name}`,
+                  value,
+                ],
+              ]
+            : [],
+        )
+      : []),
+  ]);
+  if (!statics) {
+    return { urlCache, preset, size };
+  }
+  statics.urlCache = urlCache;
+  statics.preset = preset;
+  statics.size = size;
+}
+
+export function activate(context: vscode.ExtensionContext) {
+  const statics = resetStatics();
+
+  let timeout: NodeJS.Timeout | undefined;
+
+  const decorationType = vscode.window.createTextEditorDecorationType({});
+  update(vscode.window.activeTextEditor);
+  vscode.window.onDidChangeActiveTextEditor(
+    (editor) => {
+      update(editor);
+    },
+    null,
+    context.subscriptions,
+  );
+  vscode.workspace.onDidChangeTextDocument(
+    (ev) => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        return;
+      }
+      if (ev.document !== editor.document) {
+        return;
+      }
+      resetTimeout();
+      timeout = setTimeout(() => {
+        update(editor);
+      }, 500);
+    },
+    null,
+    context.subscriptions,
+  );
+  vscode.window.onDidChangeActiveColorTheme(() => {
+    resetStatics(statics);
+    updateVisibleEditors();
+  });
+  vscode.workspace.onDidChangeConfiguration((e) => {
+    if (e.affectsConfiguration('svg-preview-on-code')) {
+      resetStatics(statics);
+      updateVisibleEditors();
+    }
+  });
+
+  function updateVisibleEditors() {
+    for (const editor of vscode.window.visibleTextEditors) {
+      update(editor);
+    }
+  }
+  function update(editor: vscode.TextEditor | null | undefined) {
+    resetTimeout();
+    if (!editor) {
+      return;
+    }
+    editor.setDecorations(decorationType, [
+      ...svgPreviewDecorations(editor.document, statics),
+    ]);
+  }
+  function resetTimeout() {
+    if (timeout) {
+      clearTimeout(timeout);
+      timeout = undefined;
+    }
+  }
+}
+
+export function deactivate() {}
+
+const parser = new XMLParser({
+  preserveOrder: true,
+  ignoreAttributes: false,
+  attributeNamePrefix: '$$',
+});
+
+const builder = new XMLBuilder({
+  preserveOrder: true,
+  ignoreAttributes: false,
+  attributeNamePrefix: '$$',
+});
+
+const IgnoreError = {};
+
 export function* svgPreviewDecorations(
   document: vscode.TextDocument,
-  { size, preset: _preset, currentMode, currentColor }: VSCodeConfiguration,
+  { preset, size, urlCache }: Statics,
 ): Generator<vscode.DecorationOptions, void, undefined> {
-  const preset: Record<string, string | number> | undefined =
-    Object.fromEntries([
-      [
-        // currentColorに使用される色を指定する
-        '$$color',
-        currentColor || (currentMode === 'dark' ? 'white' : 'black'),
-      ],
-      ...(_preset
-        ? Object.entries(_preset).flatMap(([name, value]) =>
-            // SVGのプレゼンテーション属性のみ受け付ける
-            name in SVG_PRESENTATION_ATTRIBUTES &&
-            // 値は文字列/数値のみ
-            ['string', 'number'].includes(typeof value)
-              ? [
-                  [
-                    // fast-xml-parserの仕様で
-                    `$$${name}`,
-                    value,
-                  ],
-                ]
-              : [],
-          )
-        : []),
-    ]);
-  const previous = urlCache.get(document);
-  // モードが変わったらキャッシュは使わない
-  const previousMap = previous?.mode === currentMode ? previous.map : undefined;
+  const previousMap = urlCache.get(document);
   const nextMap = new Map<string, string>();
   let comingNew = false;
   for (const { index, 0: match } of document
@@ -281,7 +271,7 @@ export function* svgPreviewDecorations(
       // supportHtmlを有効にしてimgタグをMarkdown文字列として追加
       const hoverMessage = new vscode.MarkdownString();
       hoverMessage.supportHtml = true;
-      hoverMessage.appendMarkdown(`<img src="${url}" height="${size ?? 50}">`);
+      hoverMessage.appendMarkdown(`<img src="${url}" height="${size}">`);
       yield { range, hoverMessage };
     } catch (ex) {
       // 生成失敗したこともキャッシュする
@@ -296,9 +286,9 @@ export function* svgPreviewDecorations(
   if (nextMap.size) {
     if (comingNew || nextMap.size !== previousMap?.size) {
       // 変化があったときだけ更新
-      urlCache.set(document, { mode: currentMode, map: nextMap });
+      urlCache.set(document, nextMap);
     }
-  } else if (previous) {
+  } else if (previousMap) {
     // ひとつも無くなったら削除
     urlCache.delete(document);
   }

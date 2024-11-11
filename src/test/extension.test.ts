@@ -94,7 +94,8 @@ suite('Extension Test Suite', () => {
 
     const decorations = [
       ...svgPreviewDecorations(document, {
-        currentMode: 'light',
+        urlCache: new WeakMap<vscode.TextDocument, Map<string, string>>(),
+        preset: { $$color: 'black' },
         size: 50,
       }),
     ];
