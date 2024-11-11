@@ -191,6 +191,7 @@ const parser = new XMLParser({
 
 const builder = new XMLBuilder({
   preserveOrder: true,
+  suppressEmptyNode: true,
   ignoreAttributes: false,
   attributeNamePrefix: '$$',
 });

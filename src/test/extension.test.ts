@@ -107,10 +107,7 @@ suite('Extension Test Suite', () => {
         text
           .replace(/(?<=>)\s+|\s+(?=<)/g, '')
           .replace(/(?<=<svg)(?= )/, ' color="black"')
-          .replace(
-            /<(\w+)((?:\s+\w+(?:-\w+)*="[^"]*")*)\s+\/>/g,
-            '<$1$2></$1>',
-          ),
+          .replace(/\s+(?=\/>)/g, ''),
       )}" height="50">`,
     );
     assert.equal(decorations[0].range.start.line, 1);
