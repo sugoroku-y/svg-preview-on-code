@@ -7,15 +7,6 @@ interface Statics {
   size: number;
 }
 
-function darkOrLightMode() {
-  switch (vscode.window.activeColorTheme.kind) {
-    case vscode.ColorThemeKind.Dark:
-    case vscode.ColorThemeKind.HighContrast:
-      return 'dark';
-  }
-  return 'light';
-}
-
 /**
  * SVGのプレゼンテーション属性かどうかを判定するためのテーブル
  * @see {@link https://developer.mozilla.org/ja/docs/Web/SVG/Attribute#プレゼンテーション属性 プレゼンテーション属性}
@@ -87,35 +78,35 @@ const SVG_PRESENTATION_ATTRIBUTES = {
 function resetStatics(): Statics;
 function resetStatics(statics: Statics): void;
 function resetStatics(statics?: Statics): Statics | void {
-  const mode = darkOrLightMode();
   const config = vscode.workspace.getConfiguration('svg-preview-on-code');
   const currentColor = config.get<string>('currentColor');
   const _preset = config.get<Record<string, string | number>>('preset');
   const size = config.get<number>('size') ?? 50;
   const urlCache = new WeakMap<vscode.TextDocument, Map<string, string>>();
-  const preset: Record<string, string | number> = Object.fromEntries([
-    [
-      // currentColorに使用される色を指定する
-      '$$color',
-      currentColor || (mode === 'dark' ? 'white' : 'black'),
-    ],
-    ...(_preset
-      ? Object.entries(_preset).flatMap(([name, value]) =>
-          // SVGのプレゼンテーション属性のみ受け付ける
-          name in SVG_PRESENTATION_ATTRIBUTES &&
-          // 値は文字列/数値のみ
-          ['string', 'number'].includes(typeof value)
-            ? [
-                [
-                  // fast-xml-parserに指定したプリフィックスをつける
-                  `$$${name}`,
-                  value,
-                ],
-              ]
-            : [],
-        )
-      : []),
-  ]);
+  const preset: Record<string, string | number> = {
+    // currentColorに使用される色を指定する
+    $$color:
+      currentColor ||
+      {
+        [vscode.ColorThemeKind.Dark]: 'white',
+        [vscode.ColorThemeKind.HighContrast]: 'white',
+        [vscode.ColorThemeKind.Light]: 'black',
+        [vscode.ColorThemeKind.HighContrastLight]: 'black',
+      }[vscode.window.activeColorTheme.kind],
+  };
+  if (_preset) {
+    for (const [name, value] of Object.entries(_preset)) {
+      if (
+        // SVGのプレゼンテーション属性のみ受け付ける
+        name in SVG_PRESENTATION_ATTRIBUTES &&
+        // 値は文字列/数値のみ
+        ['string', 'number'].includes(typeof value)
+      ) {
+        // fast-xml-parserに指定したプリフィックスをつける
+        preset[`$$${name}`] = value;
+      }
+    }
+  }
   if (!statics) {
     return { urlCache, preset, size };
   }
