@@ -147,18 +147,20 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions,
   );
   vscode.window.onDidChangeActiveColorTheme(() => {
-    resetStatics(statics);
     updateVisibleEditors();
   });
   vscode.workspace.onDidChangeConfiguration((e) => {
     if (e.affectsConfiguration('svg-preview-on-code')) {
-      resetStatics(statics);
       updateVisibleEditors();
     }
   });
 
   function updateVisibleEditors() {
-    for (const editor of vscode.window.visibleTextEditors) {
+    const editors = vscode.window.visibleTextEditors.filter(({ document }) =>
+      statics.urlCache.has(document),
+    );
+    resetStatics(statics);
+    for (const editor of editors) {
       update(editor);
     }
   }
