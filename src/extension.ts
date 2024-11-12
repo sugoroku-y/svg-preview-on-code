@@ -210,12 +210,15 @@ export function* svgPreviewDecorations(
     .matchAll(
       /<svg.*?>.*?<\/svg>|\bdata:image\/\w+(?:\+\w+)?;base64,(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?/gs,
     )) {
-    // タグ前後の空白を除去したものをキャッシュのキーにする
-    const normalized = match.replace(/(?<=>)\s+|\s+(?=<)/g, '');
+    const normalized = match.startsWith('data:')
+      ? // dataスキームはキャッシュ対象外
+        undefined
+      : // タグ前後の空白を除去したものをキャッシュのキーにする
+        match.replace(/(?<=>)\s+|\s+(?=<)/g, '');
     try {
       const url = (() => {
         // dataスキームはそのまま使用
-        if (match.startsWith('data:')) {
+        if (!normalized) {
           return match;
         }
         // キャッシュにあればそちらを使う
@@ -268,9 +271,11 @@ export function* svgPreviewDecorations(
       hoverMessage.appendMarkdown(`<img src="${url}" height="${size}">`);
       yield { range, hoverMessage };
     } catch (ex) {
-      // 生成失敗したこともキャッシュする
-      nextMap.set(normalized, 'error');
-      comingNew = true;
+      if (normalized) {
+        // 生成失敗したこともキャッシュする
+        nextMap.set(normalized, 'error');
+        comingNew = true;
+      }
       if (ex !== IgnoreError) {
         // 無視するエラーでなくてもログに出すだけ
         console.error(ex);
