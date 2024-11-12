@@ -268,7 +268,15 @@ export function* svgPreviewDecorations(
       // supportHtmlを有効にしてimgタグをMarkdown文字列として追加
       const hoverMessage = new vscode.MarkdownString();
       hoverMessage.supportHtml = true;
-      hoverMessage.appendMarkdown(`<img src="${url}" height="${size}">`);
+      hoverMessage.supportThemeIcons = true;
+      hoverMessage.isTrusted = {
+        enabledCommands: ['workbench.action.openSettings'],
+      };
+      hoverMessage.appendMarkdown(`
+<img src="${url}" height="${size}">
+
+[$(gear)](command:workbench.action.openSettings?["@ext:sugoroku-y.svg-preview-on-code"])
+`);
       yield { range, hoverMessage };
     } catch (ex) {
       if (normalized) {
