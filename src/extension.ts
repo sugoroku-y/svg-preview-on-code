@@ -246,11 +246,26 @@ export function* svgPreviewDecorations(
           // 名前空間がSVGのものでなければ無視する
           throw IgnoreError;
         }
+        const width = Number(svgAttributes.$$width) || undefined;
+        const height = Number(svgAttributes.$$height) || undefined;
+        const [$$width, $$height] = width
+          ? height
+            ? width < height
+              ? [(width / height) * size, size]
+              : [size, (height / width) * size]
+            : [size, undefined]
+          : height
+            ? [undefined, size]
+            : [size, size];
+
         svg[0][':@'] = {
           // svg要素に属性を追加
           ...preset,
           // 元々指定されている属性が優先
           ...svgAttributes,
+          // sizeに合わせて調整した幅と高さを優先
+          $$width,
+          $$height,
         };
         // Base64エンコードしてDataスキームURIにする
         const newUrl = `data:image/svg+xml;base64,${Buffer.from(
@@ -273,7 +288,7 @@ export function* svgPreviewDecorations(
         enabledCommands: ['workbench.action.openSettings'],
       };
       hoverMessage.appendMarkdown(`
-<img src="${url}" height="${size}">
+![](${url})
 
 [$(gear)](command:workbench.action.openSettings?["@ext:sugoroku-y.svg-preview-on-code"])
 `);
