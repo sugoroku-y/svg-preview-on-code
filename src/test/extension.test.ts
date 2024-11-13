@@ -103,12 +103,16 @@ suite('Extension Test Suite', () => {
     assert.ok(decorations[0].hoverMessage instanceof vscode.MarkdownString);
     assert.equal(
       (decorations[0].hoverMessage as vscode.MarkdownString).value,
-      `<img src="data:image/svg+xml;base64,${btoa(
+      `\n![](data:image/svg+xml;base64,${btoa(
         text
           .replace(/(?<=>)\s+|\s+(?=<)/g, '')
           .replace(/(?<=<svg)(?= )/, ' color="black"')
+          .replace(
+            /(?<=<svg(?: \w+(?:-\w+)*="[^"]*")*)(?=>)/,
+            ' width="50" height="50"',
+          )
           .replace(/\s+(?=\/>)/g, ''),
-      )}" height="50">`,
+      )})\n\n[$(gear)](command:workbench.action.openSettings?["@ext:sugoroku-y.svg-preview-on-code"])\n`,
     );
     assert.equal(decorations[0].range.start.line, 1);
     assert.equal(decorations[0].range.start.character, 6);
