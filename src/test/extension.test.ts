@@ -144,17 +144,18 @@ suite('Extension Test Suite', () => {
       height?: number;
     } = {},
   ) {
-    using _1 = spec.currentColor
-      ? mock(
-          vscode.workspace,
-          'getConfiguration',
-          () =>
-            ({
-              currentColor: spec.currentColor,
-              preset: spec.preset,
-            }) as unknown as vscode.WorkspaceConfiguration,
-        )
-      : undefined;
+    using _1 =
+      spec.currentColor || spec.preset
+        ? mock(
+            vscode.workspace,
+            'getConfiguration',
+            () =>
+              ({
+                currentColor: spec.currentColor,
+                preset: spec.preset,
+              }) as unknown as vscode.WorkspaceConfiguration,
+          )
+        : undefined;
     using _2 = mock(vscode.window, 'activeColorTheme', {
       kind: spec.colorThemeKind ?? vscode.ColorThemeKind.Light,
     });
