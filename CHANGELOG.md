@@ -2,6 +2,18 @@
 
 ## Release
 
+- `0.0.4`
+
+  - Fixed to adjust preview image width as well as height
+
+  > - プレビュー画像の高さだけではなく幅も調整するように修正
+
+- `0.0.3`
+
+  - Added link to open settings in preview.
+
+  > - プレビューに設定を開くリンクを追加
+
 - `0.0.2`
 
   - Multilingual support (only Japanese and English)
