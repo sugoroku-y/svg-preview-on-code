@@ -240,6 +240,8 @@ export class SvgPreviewOnCode {
           enabledCommands: ['workbench.action.openSettings'],
         };
         hoverMessage.appendMarkdown(`
+${normalized ? 'SVG' : 'Data URL'} Preview
+
 ![](${url})
 
 [$(gear)](command:workbench.action.openSettings?["@ext:sugoroku-y.svg-preview-on-code"])
