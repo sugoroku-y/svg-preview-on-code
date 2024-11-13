@@ -2,6 +2,12 @@
 
 ## Release
 
+- `0.0.5`
+
+  - Add `SVG Preview`/`Data URL Preview`` as title in preview
+
+  > - プレビューにタイトルとして`SVG Preview`/`Data URL Preview`を追加
+
 - `0.0.4`
 
   - Fixed to adjust preview image width as well as height

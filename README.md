@@ -75,3 +75,7 @@ This extension contributes the following settings:
   svg内でcurrentColorが指定された箇所を描画する色を指定します。
 
   省略した場合、ダークモードのときには白、ライトモードのときには黒を使用します。
+
+Click on the ⚙ icon below the preview to open these settings screens.
+
+プレビューの下にある⚙のアイコンをクリックするとこれらの設定画面が開きます。
