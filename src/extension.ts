@@ -154,6 +154,13 @@ export function activate(context: vscode.ExtensionContext) {
       updateVisibleEditors();
     }
   });
+  context.subscriptions.push({
+    dispose() {
+      for (const document of vscode.workspace.textDocuments) {
+        statics.urlCache.delete(document);
+      }
+    },
+  });
 
   function updateVisibleEditors() {
     const editors = vscode.window.visibleTextEditors.filter(({ document }) =>
