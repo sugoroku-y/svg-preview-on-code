@@ -175,7 +175,7 @@ suite('Extension Test Suite', () => {
     assert.ok(decoration.hoverMessage instanceof vscode.MarkdownString);
     assert.match(
       (decoration.hoverMessage as vscode.MarkdownString).value,
-      /^\n!\[\]\(data:image\/svg\+xml;base64,([A-Za-z0-9+/]+=*)\)\n\n\[\$\(gear\)\]\(command:workbench.action.openSettings\?\["@ext:sugoroku-y.svg-preview-on-code"\]\)\n$/,
+      /^\nSVG Preview\n\n!\[\]\(data:image\/svg\+xml;base64,([A-Za-z0-9+/]+=*)\)\n\n\[\$\(gear\)\]\(command:workbench.action.openSettings\?\["@ext:sugoroku-y.svg-preview-on-code"\]\)\n$/,
     );
     const svg = atob(RegExp.$1);
     assert.equal(
