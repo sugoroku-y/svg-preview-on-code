@@ -1,6 +1,9 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
+import { createReadStream } from 'fs';
+import { createInterface } from 'readline';
 import { svgPreviewDecorations } from '../extension';
+import { resolve } from 'path';
 
 class MockTextDocument implements vscode.TextDocument {
   uri!: vscode.Uri;
@@ -118,5 +121,25 @@ suite('Extension Test Suite', () => {
     assert.equal(decorations[0].range.start.character, 6);
     assert.equal(decorations[0].range.end.line, 3);
     assert.equal(decorations[0].range.end.character, 12);
+  });
+
+  test('Changelog', async () => {
+    const { version } = require('../../package.json');
+    const stream = createInterface(
+      createReadStream(resolve(__dirname, '..', '..', 'CHANGELOG.md')),
+    );
+    let count = 0;
+    let currentVersion = '';
+    for await (const line of stream) {
+      const match = /^[ \t]*- `(\d+\.\d+\.\d+)`\s*$/.exec(line);
+      if (match) {
+        currentVersion = match[1];
+        continue;
+      }
+      if (line.trim() && currentVersion === version) {
+        ++count;
+      }
+    }
+    assert.ok(count, `CHANGELOG.mdに${version}の記載がありません。`);
   });
 });
