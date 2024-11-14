@@ -4,6 +4,7 @@ import { createReadStream } from 'fs';
 import { createInterface } from 'readline';
 import { SvgPreviewOnCode } from '../extension';
 import { resolve } from 'path';
+import { XMLParser } from 'fast-xml-parser';
 
 class MockTextDocument implements vscode.TextDocument {
   uri!: vscode.Uri;
@@ -97,22 +98,27 @@ function getPropertyDescriptor(
   return undefined;
 }
 
+const saved = Symbol();
+
 function mock<T extends object, K extends keyof T>(
   target: T,
   key: K,
   replace: T[K],
 ): { [Symbol.dispose](): void } {
   const desc = getPropertyDescriptor(target, key);
-  if (desc?.get && !desc.set) {
-    const save = desc.get;
+  if (!desc) {
+    throw new Error(`unknown property: '${String(key)}'`);
+  }
+  if ((desc.get && !desc.set) || (!desc.get && !desc.set && !desc.writable)) {
     Object.defineProperty(target, key, { get: () => replace });
     return {
       [Symbol.dispose]() {
-        Object.defineProperty(target, key, { get: save });
+        Object.defineProperty(target, key, desc);
       },
     };
   }
   const save = target[key];
+  (target as { [saved]: T[K] })[saved] = save;
   target[key] = replace;
   return {
     [Symbol.dispose]() {
@@ -124,13 +130,11 @@ function mock<T extends object, K extends keyof T>(
 suite('Extension Test Suite', () => {
   vscode.window.showInformationMessage('Start all tests.');
 
-  const text = `
-<svg xmlns="http://www.w3.org/2000/svg" width="100">
-  <path d="m4 4l17 17a4 4 0 0 1 8 8l17 17m-32 0l10-10-5-5 22-22-5-5" />
-</svg>
-`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg"></svg>`;
+  const dataScheme = `data:image/png;base64,AAAA`;
   function decoration(
     spec: {
+      text: string;
       language?: string;
       currentColor?: string;
       colorThemeKind?: vscode.ColorThemeKind;
@@ -144,6 +148,7 @@ suite('Extension Test Suite', () => {
       width?: number;
       height?: number;
       previewTitle?: string;
+      contentType?: string;
       settingsCaption?: string;
     } = {},
   ) {
@@ -160,14 +165,14 @@ suite('Extension Test Suite', () => {
     using _2 = mock(vscode.window, 'activeColorTheme', {
       kind: spec.colorThemeKind ?? vscode.ColorThemeKind.Light,
     });
-    const document = new MockTextDocument(
+    const text =
       spec.width || spec.height
-        ? text.replace(
-            /(?<=<svg(?: \w+(?:-\w+)*="[^"]*")*)(?=>)/,
+        ? spec.text.replace(
+            /(?<=<svg)(?=\s)/,
             `${spec.width ? ` width="${spec.width}"` : ''}${spec.height ? ` height="${spec.height}"` : ''}`,
           )
-        : text,
-    );
+        : spec.text;
+    const document = new MockTextDocument(text);
     const [decoration, ...rest] = new SvgPreviewOnCode().svgPreviewDecorations(
       document,
     );
@@ -176,84 +181,124 @@ suite('Extension Test Suite', () => {
     assert.ok(decoration.hoverMessage instanceof vscode.MarkdownString);
     assert.match(
       (decoration.hoverMessage as vscode.MarkdownString).value,
-      /^(.*)\n\n!\[\]\(data:image\/svg\+xml;base64,([A-Za-z0-9+/]+=*)\)\n\n\[\$\(gear\) (.*)\]\(command:workbench.action.openSettings\?\["@ext:sugoroku-y.svg-preview-on-code"\]\)$/,
+      /^### (.*)\n\n!\[\]\(data:(.*?);base64,([A-Za-z0-9+/]+=*)\)\n\n\[\$\(gear\) (.*)\]\(command:workbench.action.openSettings\?\["@ext:sugoroku-y.svg-preview-on-code"\]\)$/,
     );
     const previewTitle = RegExp.$1;
-    const svg = atob(RegExp.$2);
-    const settingsCaption = RegExp.$3;
-    assert.equal(
-      svg,
-      `<svg color="${expect.currentColor ?? 'black'}"${
-        expect.preset
-          ? Object.entries(expect.preset)
-              .map(([name, value]) => ` ${name}="${value}"`)
-              .join('')
-          : ''
-      } xmlns="http://www.w3.org/2000/svg" width="${expect.width ?? 50}" height="${expect.height ?? 50}"><path d="m4 4l17 17a4 4 0 0 1 8 8l17 17m-32 0l10-10-5-5 22-22-5-5"/></svg>`,
-    );
-    assert.equal(decoration.range.start.line, 1);
+    const contentType = RegExp.$2;
+    const decoded = atob(RegExp.$3);
+    const settingsCaption = RegExp.$4;
+    if (contentType === 'image/svg+xml') {
+      const parser = new XMLParser({
+        preserveOrder: true,
+        ignoreAttributes: false,
+        attributeNamePrefix: '$$',
+      });
+      const svg = parser.parse(decoded);
+      const attributes = svg[0][':@'];
+      assert.equal(attributes.$$color, expect.currentColor ?? 'black');
+      assert.equal(attributes.$$xmlns, 'http://www.w3.org/2000/svg');
+      assert.equal(attributes.$$width, expect.width ?? 50);
+      assert.equal(attributes.$$height, expect.height ?? 50);
+      if (spec.preset) {
+        for (const [name, value] of Object.entries(spec.preset)) {
+          assert.equal(attributes[`$$${name}`], value);
+        }
+      }
+      assert.equal(
+        Object.keys(attributes).length,
+        4 + Object.keys(spec.preset ?? {}).length,
+      );
+    }
+    assert.equal(decoration.range.start.line, 0);
     assert.equal(decoration.range.start.character, 0);
-    assert.equal(decoration.range.end.line, 3);
-    assert.equal(decoration.range.end.character, 6);
+    assert.equal(decoration.range.end.line, 0);
+    assert.equal(decoration.range.end.character, text.length);
     if (expect.previewTitle) {
       assert.equal(previewTitle, expect.previewTitle);
+    }
+    if (expect.contentType) {
+      assert.equal(contentType, expect.contentType);
     }
     if (expect.settingsCaption) {
       assert.equal(settingsCaption, expect.settingsCaption);
     }
   }
-  test('currentColor: red', async () => {
-    decoration({ currentColor: 'red' }, { currentColor: 'red' });
+
+  test('svg: currentColor: red', async () => {
+    decoration({ text: svg, currentColor: 'red' }, { currentColor: 'red' });
   });
-  test('currentColor: blue', async () => {
-    decoration({ currentColor: 'blue' }, { currentColor: 'blue' });
+  test('svg: currentColor: blue', async () => {
+    decoration({ text: svg, currentColor: 'blue' }, { currentColor: 'blue' });
   });
-  test('dark mode', async () => {
+  test('svg: dark mode', async () => {
     decoration(
-      { colorThemeKind: vscode.ColorThemeKind.Dark },
+      { text: svg, colorThemeKind: vscode.ColorThemeKind.Dark },
       { currentColor: 'white' },
     );
   });
-  test('light mode', async () => {
-    decoration({ colorThemeKind: vscode.ColorThemeKind.Light });
+  test('svg: light mode', async () => {
+    decoration({ text: svg, colorThemeKind: vscode.ColorThemeKind.Light });
   });
-  test('high contrast dark mode', async () => {
+  test('svg: high contrast dark mode', async () => {
     decoration(
-      { colorThemeKind: vscode.ColorThemeKind.HighContrast },
+      { text: svg, colorThemeKind: vscode.ColorThemeKind.HighContrast },
       { currentColor: 'white' },
     );
   });
-  test('high contrast light mode', async () => {
-    decoration({ colorThemeKind: vscode.ColorThemeKind.HighContrastLight });
+  test('svg: high contrast light mode', async () => {
+    decoration({
+      text: svg,
+      colorThemeKind: vscode.ColorThemeKind.HighContrastLight,
+    });
   });
-  test('width 100', async () => {
-    decoration({ width: 100 });
+  test('svg: width 100', async () => {
+    decoration({ text: svg, width: 100 });
   });
-  test('height 100', async () => {
-    decoration({ height: 100 });
+  test('svg: height 100', async () => {
+    decoration({ text: svg, height: 100 }, { height: 50, width: 50 });
   });
-  test('100x25', async () => {
-    decoration({ width: 100, height: 25 }, { height: 12.5 });
+  test('svg: 100x25', async () => {
+    decoration({ text: svg, width: 100, height: 25 }, { height: 12.5 });
   });
-  test('25x100', async () => {
-    decoration({ width: 25, height: 100 }, { width: 12.5 });
+  test('svg: 25x100', async () => {
+    decoration({ text: svg, width: 25, height: 100 }, { width: 12.5 });
   });
-  test('preset: {stroke:currentColor}', async () => {
+  test('svg: preset: {stroke:currentColor}', async () => {
     decoration(
-      { preset: { stroke: 'currentColor' } },
-      { preset: { stroke: 'currentColor' } },
+      { text: svg, preset: { stroke: 'currentColor', 'stroke-width': 2 } },
+      { preset: { stroke: 'currentColor', 'stroke-width': 2 } },
     );
   });
-  test('language: none', async () => {
+  test('svg: language: none', async () => {
     decoration(
-      {},
-      { previewTitle: '### SVG Preview', settingsCaption: 'Settings' },
+      { text: svg },
+      { previewTitle: 'SVG Preview', settingsCaption: 'Settings' },
     );
   });
-  test('language: ja', async () => {
+  test('svg: language: ja', async () => {
     decoration(
-      { language: 'ja' },
-      { previewTitle: '### SVG プレビュー', settingsCaption: '設定' },
+      { text: svg, language: 'ja' },
+      { previewTitle: 'SVG プレビュー', settingsCaption: '設定' },
+    );
+  });
+  test('data url: language: none', async () => {
+    decoration(
+      { text: dataScheme },
+      {
+        contentType: 'image/png',
+        previewTitle: 'Data URL Preview',
+        settingsCaption: 'Settings',
+      },
+    );
+  });
+  test('data url: language: ja', async () => {
+    decoration(
+      { text: dataScheme, language: 'ja' },
+      {
+        contentType: 'image/png',
+        previewTitle: 'Data URL プレビュー',
+        settingsCaption: '設定',
+      },
     );
   });
 
@@ -276,4 +321,74 @@ suite('Extension Test Suite', () => {
     }
     assert.ok(count, `CHANGELOG.mdに${version}の記載がありません。`);
   });
+
+  test('actual edit', async () => {
+    const extension = vscode.extensions.getExtension(
+      'sugoroku-y.svg-preview-on-code',
+    );
+    assert.ok(extension?.isActive);
+    const e: SvgPreviewOnCode = await extension.activate();
+    const yields: unknown[][] = [];
+    using _ = mock(
+      e,
+      'svgPreviewDecorations',
+      function* (this: typeof e, document) {
+        const ys: unknown[] = [];
+        yields.push(ys);
+        const g = (
+          this as unknown as { [saved]: typeof e.svgPreviewDecorations }
+        )[saved](document);
+        for (const e of g) {
+          ys.push(e);
+          yield e;
+        }
+      },
+    );
+    const document = await vscode.workspace.openTextDocument();
+    const editor = await vscode.window.showTextDocument(document);
+    assert.deepEqual(yields, [[]]);
+    await new Promise((r) => setTimeout(r, 1000));
+    await editor.edit((builder) => {
+      builder.insert(document.positionAt(0), svg);
+    });
+    await new Promise((r) => setTimeout(r, 500));
+    assert.equal(yields.length, 2);
+    assert.equal(yields[1].length, 1);
+    assert.equal(
+      JSON.stringify(yields[1][0]),
+      '{"range":[{"line":0,"character":0},{"line":0,"character":46}],"hoverMessage":{}}',
+    );
+    assert.equal(
+      (yields[1][0] as any).hoverMessage.value,
+      `### SVG Preview
+
+![](data:image/svg+xml;base64,PHN2ZyBjb2xvcj0id2hpdGUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgd2lkdGg9IjUwIiBoZWlnaHQ9IjUwIi8+)
+
+[$(gear) Settings](command:workbench.action.openSettings?["@ext:sugoroku-y.svg-preview-on-code"])`,
+    );
+    await editor.edit((builder) => {
+      builder.delete(
+        new vscode.Range(
+          document.positionAt(0),
+          document.positionAt(document.getText().length),
+        ),
+      );
+      builder.insert(document.positionAt(0), dataScheme);
+    });
+    await new Promise((r) => setTimeout(r, 500));
+    assert.equal(yields.length, 3);
+    assert.equal(yields[2].length, 1);
+    assert.equal(
+      JSON.stringify(yields[2][0]),
+      '{"range":[{"line":0,"character":0},{"line":0,"character":26}],"hoverMessage":{}}',
+    );
+    assert.equal(
+      (yields[2][0] as any).hoverMessage.value,
+      `### Data URL Preview
+
+![](data:image/png;base64,AAAA)
+
+[$(gear) Settings](command:workbench.action.openSettings?["@ext:sugoroku-y.svg-preview-on-code"])`,
+    );
+  }).timeout(10000);
 });

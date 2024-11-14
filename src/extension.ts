@@ -303,7 +303,9 @@ export class SvgPreviewOnCode {
 }
 
 export function activate(context: vscode.ExtensionContext) {
-  new SvgPreviewOnCode().activate(context);
+  const extension = new SvgPreviewOnCode();
+  extension.activate(context);
+  return extension;
 }
 
 export function deactivate() {}
