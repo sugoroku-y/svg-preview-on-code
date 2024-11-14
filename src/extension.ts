@@ -4,7 +4,7 @@ import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 export class SvgPreviewOnCode {
   private activated = false;
   private urlCache!: WeakMap<vscode.TextDocument, Map<string, string>>;
-  private preset!: Record<string, string | number>;
+  private preset!: Record<`$$${string}`, string | number>;
   private size!: number;
   private timeout?: NodeJS.Timeout;
 
