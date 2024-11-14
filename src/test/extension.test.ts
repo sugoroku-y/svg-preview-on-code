@@ -131,6 +131,7 @@ suite('Extension Test Suite', () => {
 `;
   function decoration(
     spec: {
+      language?: string;
       currentColor?: string;
       colorThemeKind?: vscode.ColorThemeKind;
       preset?: object;
@@ -142,20 +143,20 @@ suite('Extension Test Suite', () => {
       preset?: object;
       width?: number;
       height?: number;
+      previewTitle?: string;
+      settingsCaption?: string;
     } = {},
   ) {
-    using _1 =
-      spec.currentColor || spec.preset
-        ? mock(
-            vscode.workspace,
-            'getConfiguration',
-            () =>
-              ({
-                currentColor: spec.currentColor,
-                preset: spec.preset,
-              }) as unknown as vscode.WorkspaceConfiguration,
-          )
-        : undefined;
+    using _0 = mock(vscode.env, 'language', spec.language ?? 'none');
+    using _1 = mock(
+      vscode.workspace,
+      'getConfiguration',
+      () =>
+        ({
+          currentColor: spec.currentColor,
+          preset: spec.preset,
+        }) as unknown as vscode.WorkspaceConfiguration,
+    );
     using _2 = mock(vscode.window, 'activeColorTheme', {
       kind: spec.colorThemeKind ?? vscode.ColorThemeKind.Light,
     });
@@ -175,9 +176,11 @@ suite('Extension Test Suite', () => {
     assert.ok(decoration.hoverMessage instanceof vscode.MarkdownString);
     assert.match(
       (decoration.hoverMessage as vscode.MarkdownString).value,
-      /^\nSVG Preview\n\n!\[\]\(data:image\/svg\+xml;base64,([A-Za-z0-9+/]+=*)\)\n\n\[\$\(gear\)\]\(command:workbench.action.openSettings\?\["@ext:sugoroku-y.svg-preview-on-code"\]\)\n$/,
+      /^(.*)\n\n!\[\]\(data:image\/svg\+xml;base64,([A-Za-z0-9+/]+=*)\)\n\n\[\$\(gear\) (.*)\]\(command:workbench.action.openSettings\?\["@ext:sugoroku-y.svg-preview-on-code"\]\)$/,
     );
-    const svg = atob(RegExp.$1);
+    const previewTitle = RegExp.$1;
+    const svg = atob(RegExp.$2);
+    const settingsCaption = RegExp.$3;
     assert.equal(
       svg,
       `<svg color="${expect.currentColor ?? 'black'}"${
@@ -192,6 +195,12 @@ suite('Extension Test Suite', () => {
     assert.equal(decoration.range.start.character, 0);
     assert.equal(decoration.range.end.line, 3);
     assert.equal(decoration.range.end.character, 6);
+    if (expect.previewTitle) {
+      assert.equal(previewTitle, expect.previewTitle);
+    }
+    if (expect.settingsCaption) {
+      assert.equal(settingsCaption, expect.settingsCaption);
+    }
   }
   test('currentColor: red', async () => {
     decoration({ currentColor: 'red' }, { currentColor: 'red' });
@@ -218,10 +227,10 @@ suite('Extension Test Suite', () => {
     decoration({ colorThemeKind: vscode.ColorThemeKind.HighContrastLight });
   });
   test('width 100', async () => {
-    decoration({ width: 100 }, {});
+    decoration({ width: 100 });
   });
   test('height 100', async () => {
-    decoration({ height: 100 }, {});
+    decoration({ height: 100 });
   });
   test('100x25', async () => {
     decoration({ width: 100, height: 25 }, { height: 12.5 });
@@ -233,6 +242,18 @@ suite('Extension Test Suite', () => {
     decoration(
       { preset: { stroke: 'currentColor' } },
       { preset: { stroke: 'currentColor' } },
+    );
+  });
+  test('language: none', async () => {
+    decoration(
+      {},
+      { previewTitle: '### SVG Preview', settingsCaption: 'Settings' },
+    );
+  });
+  test('language: ja', async () => {
+    decoration(
+      { language: 'ja' },
+      { previewTitle: '### SVG プレビュー', settingsCaption: '設定' },
     );
   });
 

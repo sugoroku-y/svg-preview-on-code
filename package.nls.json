@@ -1,4 +1,6 @@
 {
+  "preview.preview": "Preview",
+  "preview.settings": "Settings",
   "configuration.description.currentColor": "Specifies the color to draw the area in the svg where currentColor is specified. \n\nIf omitted, black is used in dark mode and white in light mode.",
   "configuration.description.size": "Specifies the size of the preview.\n\nIf omitted, it will be 50 pixels.",
   "configuration.description.preset": "Attributes that are set by default for svg elements.\n\nIf there are properties that are reflected even if they are not specified in the attribute due to CSS or other reasons, they should be described.\n\nCan be specified in the presentation attributes of SVG.\n\n@see [presentation attributes of SVG](https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute#presentation_attributes)\n```json\n\"svg-preview-on-code.preset\": {\n  \"fill\": \"none\",\n  \"stroke\": \"currentColor\",\n  \"stroke-width\": \"2\",\n  \"stroke-linecap\": \"round\",\n  \"stroke-linejoin\": \"round\",\n}\n```\n"

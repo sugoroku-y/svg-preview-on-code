@@ -1,6 +1,39 @@
 import * as vscode from 'vscode';
 import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 
+function localeString(key: string): string {
+  const language = vscode.env.language;
+  if (localeString.language !== language) {
+    localeString.language = language;
+    localeString.cache = {
+      ...require(`../package.nls.json`),
+      ...(() => {
+        try {
+          // 多言語対応していれば読み込み
+          return require(`../package.nls.${language}.json`);
+        } catch (ex) {
+          if (
+            ex instanceof Error &&
+            'code' in ex &&
+            ex.code === 'MODULE_NOT_FOUND'
+          ) {
+            // package.nls.*.jsonが見つからないエラーは無視
+            return;
+          }
+          // その他のエラーはログを出して投げ直す
+          console.error(ex);
+          throw ex;
+        }
+      })(),
+    };
+  }
+  return localeString.cache[key];
+}
+namespace localeString {
+  export let cache: Record<string, string>;
+  export let language: string;
+}
+
 export class SvgPreviewOnCode {
   private activated = false;
   private urlCache!: WeakMap<vscode.TextDocument, Map<string, string>>;
@@ -232,19 +265,18 @@ export class SvgPreviewOnCode {
         const end = document.positionAt(index + match.length);
         const range = new vscode.Range(start, end);
         // supportHtmlを有効にしてimgタグをMarkdown文字列として追加
-        const hoverMessage = new vscode.MarkdownString();
-        hoverMessage.supportHtml = true;
-        hoverMessage.supportThemeIcons = true;
+        const hoverMessage = new vscode.MarkdownString(
+          [
+            `### ${normalized ? 'SVG' : 'Data URL'} ${localeString('preview.preview')}`,
+            `![](${url})`,
+            `[$(gear) ${localeString('preview.settings')}](command:workbench.action.openSettings?["@ext:sugoroku-y.svg-preview-on-code"])`,
+          ].join('\n\n'),
+
+          true,
+        );
         hoverMessage.isTrusted = {
           enabledCommands: ['workbench.action.openSettings'],
         };
-        hoverMessage.appendMarkdown(`
-${normalized ? 'SVG' : 'Data URL'} Preview
-
-![](${url})
-
-[$(gear)](command:workbench.action.openSettings?["@ext:sugoroku-y.svg-preview-on-code"])
-`);
         yield { range, hoverMessage };
       } catch (ex) {
         if (normalized) {
