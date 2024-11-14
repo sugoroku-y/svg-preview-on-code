@@ -96,13 +96,12 @@ export class SvgPreviewOnCode {
 
   private reset() {
     const config = vscode.workspace.getConfiguration('svg-preview-on-code');
-    const currentColor = config.currentColor;
     this.size = config.size ?? 50;
     this.urlCache = new WeakMap<vscode.TextDocument, Map<string, string>>();
     this.preset = {
       // currentColorに使用される色を指定する
       $$color:
-        currentColor ||
+        config.currentColor ||
         {
           [vscode.ColorThemeKind.Dark]: 'white',
           [vscode.ColorThemeKind.HighContrast]: 'white',
