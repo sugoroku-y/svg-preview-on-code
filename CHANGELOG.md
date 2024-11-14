@@ -2,6 +2,12 @@
 
 ## Release
 
+- `0.0.6`
+
+  - Multilingual support for preview screens
+
+  > - プレビュー画面の多言語対応
+
 - `0.0.5`
 
   - Add `SVG Preview`/`Data URL Preview`` as title in preview
