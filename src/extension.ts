@@ -38,7 +38,7 @@ export class SvgPreviewOnCode {
   private activated = false;
   private urlCache!: WeakMap<vscode.TextDocument, Map<string, string>>;
   private preset!: Record<`$$${string}`, string | number>;
-  private size!: number;
+  private size?: number;
   private timeout?: NodeJS.Timeout;
 
   private readonly parser = new XMLParser({
@@ -129,7 +129,7 @@ export class SvgPreviewOnCode {
 
   private reset() {
     const config = vscode.workspace.getConfiguration('svg-preview-on-code');
-    this.size = config.size ?? 50;
+    this.size = config.size;
     this.urlCache = new WeakMap<vscode.TextDocument, Map<string, string>>();
     this.preset = {
       // currentColorに使用される色を指定する
@@ -233,14 +233,23 @@ export class SvgPreviewOnCode {
             // 名前空間がSVGのものでなければ無視する
             throw SvgPreviewOnCode.IgnoreError;
           }
+let size: { $$width: number; $$height: number } | undefined;
+          if (this.size) {
           const width = Number(svgAttributes.$$width) || undefined;
           const height = Number(svgAttributes.$$height) || undefined;
-          const [$$width, $$height] =
+          size =
             !width || !height
-              ? [this.size, this.size]
+              ? { $$width: this.size, $$height: this.size }
               : width < height
-                ? [(width / height) * this.size, this.size]
-                : [this.size, (height / width) * this.size];
+                ? {
+                      $$width: (width / height) * this.size,
+                      $$height: this.size,
+                    }
+                : {
+                      $$width: this.size,
+                      $$height: (height / width) * this.size,
+                    };
+          }
 
           svg[0][':@'] = {
             // svg要素に属性を追加
@@ -248,8 +257,7 @@ export class SvgPreviewOnCode {
             // 元々指定されている属性が優先
             ...svgAttributes,
             // sizeに合わせて調整した幅と高さを優先
-            $$width,
-            $$height,
+            ...size,
           };
           // Base64エンコードしてDataスキームURIにする
           const newUrl = `data:image/svg+xml;base64,${Buffer.from(
