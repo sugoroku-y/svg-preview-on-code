@@ -272,7 +272,7 @@ let size: { $$width: number; $$height: number } | undefined;
         const start = document.positionAt(index);
         const end = document.positionAt(index + match.length);
         const range = new vscode.Range(start, end);
-        // supportHtmlを有効にしてimgタグをMarkdown文字列として追加
+        // Markdown文字列として追加
         const hoverMessage = new vscode.MarkdownString(
           [
             `### ${normalized ? 'SVG' : 'Data URL'} ${localeString('preview.preview')}`,
