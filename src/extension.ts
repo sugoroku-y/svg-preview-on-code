@@ -37,7 +37,9 @@ namespace localeString {
 export class SvgPreviewOnCode {
   private activated = false;
   private urlCache!: WeakMap<vscode.TextDocument, Map<string, string>>;
-  private preset!: Record<`$$${string}`, string | number>;
+  private preset!: Partial<
+    Record<`$$${SvgPresentationAttribute}`, string | number>
+  >;
   private size?: number;
   private timeout?: NodeJS.Timeout;
 
@@ -146,7 +148,7 @@ export class SvgPreviewOnCode {
       for (const [name, value] of Object.entries(config.preset)) {
         if (
           // SVGのプレゼンテーション属性のみ受け付ける
-          name in SVG_PRESENTATION_ATTRIBUTES &&
+          isSvgPresentationAttribute(name) &&
           // 値は文字列/数値のみ
           (typeof value === 'string' || typeof value === 'number')
         ) {
@@ -391,3 +393,10 @@ const SVG_PRESENTATION_ATTRIBUTES = {
   'word-spacing': true,
   'writing-mode': true,
 } as const;
+type SvgPresentationAttribute = keyof typeof SVG_PRESENTATION_ATTRIBUTES;
+
+function isSvgPresentationAttribute(
+  name: string,
+): name is SvgPresentationAttribute {
+  return name in SVG_PRESENTATION_ATTRIBUTES;
+}
