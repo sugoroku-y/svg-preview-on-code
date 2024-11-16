@@ -139,6 +139,7 @@ suite('Extension Test Suite', () => {
       currentColor?: string;
       colorThemeKind?: vscode.ColorThemeKind;
       preset?: object;
+      size?: number;
       width?: number;
       height?: number;
     },
@@ -160,6 +161,7 @@ suite('Extension Test Suite', () => {
         ({
           currentColor: spec.currentColor,
           preset: spec.preset,
+          size: spec.size,
         }) as unknown as vscode.WorkspaceConfiguration,
     );
     using _2 = mock(vscode.window, 'activeColorTheme', {
@@ -181,7 +183,7 @@ suite('Extension Test Suite', () => {
     assert.ok(decoration.hoverMessage instanceof vscode.MarkdownString);
     assert.match(
       (decoration.hoverMessage as vscode.MarkdownString).value,
-      /^### (.*)\n\n!\[\]\(data:(.*?);base64,([A-Za-z0-9+/]+=*)\)\n\n\[\$\(gear\) (.*)\]\(command:workbench.action.openSettings\?\["@ext:sugoroku-y.svg-preview-on-code"\]\)$/,
+      /^### (.*)\n\n!\[\]\(data:(.*?);base64,([A-Za-z0-9+/]+=*)\)(?:\n\n\[\$\(gear\) (.*)\]\(command:workbench.action.openSettings\?\["@ext:sugoroku-y.svg-preview-on-code"\]\))?$/,
     );
     const previewTitle = RegExp.$1;
     const contentType = RegExp.$2;
@@ -197,8 +199,8 @@ suite('Extension Test Suite', () => {
       const attributes = svg[0][':@'];
       assert.equal(attributes.$$color, expect.currentColor ?? 'black');
       assert.equal(attributes.$$xmlns, 'http://www.w3.org/2000/svg');
-      assert.equal(attributes.$$width, expect.width ?? 50);
-      assert.equal(attributes.$$height, expect.height ?? 50);
+      assert.equal(attributes.$$width, expect.width);
+      assert.equal(attributes.$$height, expect.height);
       if (spec.preset) {
         for (const [name, value] of Object.entries(spec.preset)) {
           assert.equal(attributes[`$$${name}`], value);
@@ -206,7 +208,9 @@ suite('Extension Test Suite', () => {
       }
       assert.equal(
         Object.keys(attributes).length,
-        4 + Object.keys(spec.preset ?? {}).length,
+        2 +
+          (spec.size ? 2 : (spec.width ? 1 : 0) + (spec.height ? 1 : 0)) +
+          Object.keys(spec.preset ?? {}).length,
       );
     }
     assert.equal(decoration.range.start.line, 0);
@@ -252,16 +256,22 @@ suite('Extension Test Suite', () => {
     });
   });
   test('svg: width 100', async () => {
-    decoration({ text: svg, width: 100 });
+    decoration({ text: svg, width: 100 }, { width: 100 });
   });
   test('svg: height 100', async () => {
-    decoration({ text: svg, height: 100 }, { height: 50, width: 50 });
+    decoration({ text: svg, height: 100 }, { height: 100 });
   });
   test('svg: 100x25', async () => {
-    decoration({ text: svg, width: 100, height: 25 }, { height: 12.5 });
+    decoration(
+      { text: svg, width: 100, height: 25 },
+      { width: 100, height: 25 },
+    );
   });
   test('svg: 25x100', async () => {
-    decoration({ text: svg, width: 25, height: 100 }, { width: 12.5 });
+    decoration(
+      { text: svg, width: 25, height: 100 },
+      { width: 25, height: 100 },
+    );
   });
   test('svg: preset: {stroke:currentColor}', async () => {
     decoration(
@@ -287,7 +297,7 @@ suite('Extension Test Suite', () => {
       {
         contentType: 'image/png',
         previewTitle: 'Data URL Preview',
-        settingsCaption: 'Settings',
+        settingsCaption: undefined,
       },
     );
   });
@@ -297,7 +307,7 @@ suite('Extension Test Suite', () => {
       {
         contentType: 'image/png',
         previewTitle: 'Data URL プレビュー',
-        settingsCaption: '設定',
+        settingsCaption: undefined,
       },
     );
   });
@@ -362,7 +372,7 @@ suite('Extension Test Suite', () => {
       (yields[1][0] as any).hoverMessage.value,
       `### SVG Preview
 
-![](data:image/svg+xml;base64,PHN2ZyBjb2xvcj0id2hpdGUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgd2lkdGg9IjUwIiBoZWlnaHQ9IjUwIi8+)
+![](data:image/svg+xml;base64,PHN2ZyBjb2xvcj0id2hpdGUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIvPg==)
 
 [$(gear) Settings](command:workbench.action.openSettings?["@ext:sugoroku-y.svg-preview-on-code"])`,
     );
@@ -386,9 +396,7 @@ suite('Extension Test Suite', () => {
       (yields[2][0] as any).hoverMessage.value,
       `### Data URL Preview
 
-![](data:image/png;base64,AAAA)
-
-[$(gear) Settings](command:workbench.action.openSettings?["@ext:sugoroku-y.svg-preview-on-code"])`,
+![](data:image/png;base64,AAAA)`,
     );
   }).timeout(10000);
 });
