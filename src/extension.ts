@@ -277,13 +277,20 @@ export class SvgPreviewOnCode {
           [
             `### ${normalized ? 'SVG' : 'Data URL'} ${localeString('preview.preview')}`,
             `![](${url})`,
-            `[$(gear) ${localeString('preview.settings')}](command:workbench.action.openSettings?["@ext:sugoroku-y.svg-preview-on-code"])`,
+            ...(normalized
+              ? // 設定のリンクはsvgのときだけ
+                [
+                  `[$(gear) ${localeString('preview.settings')}](command:workbench.action.openSettings?["@ext:sugoroku-y.svg-preview-on-code"])`,
+                ]
+              : []),
           ].join('\n\n'),
           true,
         );
-        hoverMessage.isTrusted = {
-          enabledCommands: ['workbench.action.openSettings'],
-        };
+        if (normalized) {
+          hoverMessage.isTrusted = {
+            enabledCommands: ['workbench.action.openSettings'],
+          };
+        }
         yield { range, hoverMessage };
       } catch (ex) {
         if (normalized) {
