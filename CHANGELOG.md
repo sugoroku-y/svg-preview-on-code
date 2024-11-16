@@ -2,6 +2,16 @@
 
 ## Release
 
+- `0.0.7`
+
+  - Changed not to adjust size when size in settings is omitted
+  - Changed Data URL preview screen not to show links to settings
+  - Fixed exception not raised by invalid svg description
+
+  > - 設定のsizeが省略されたときはサイズの調整を行わないように変更
+  > - Data URLのプレビュー画面では設定のリンクを表示しないように変更
+  > - 不正なsvgの記述によって例外が発生しないように修正
+
 - `0.0.6`
 
   - Multilingual support for preview screens
