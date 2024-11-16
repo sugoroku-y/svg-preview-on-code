@@ -197,7 +197,7 @@ export class SvgPreviewOnCode {
     for (const { index, 0: match } of document
       .getText()
       .matchAll(
-        /<svg.*?>.*?<\/svg>|\bdata:image\/\w+(?:\+\w+)?;base64,(?=[A-Za-z0-9+/])(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}[A-Za-z0-9+/=]=)?(?![A-Za-z0-9+/=])/gs,
+        /<svg\s[^>]*>.*?<\/svg>|\bdata:image\/\w+(?:\+\w+)?;base64,(?=[A-Za-z0-9+/])(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}[A-Za-z0-9+/=]=)?(?![A-Za-z0-9+/=])/gs,
       )) {
       const normalized = match.startsWith('data:')
         ? // dataスキームはキャッシュ対象外
@@ -229,6 +229,14 @@ export class SvgPreviewOnCode {
               throw SvgPreviewOnCode.IgnoreError;
             }
           })();
+          if (!('svg' in svg[0])) {
+            // ルート要素がsvgではない
+            throw SvgPreviewOnCode.IgnoreError;
+          }
+          if (!(':@' in svg[0])) {
+            // ルート要素に属性がない(svgの名前空間指定があるはずなので属性が無ければ対象外)
+            throw SvgPreviewOnCode.IgnoreError;
+          }
           // ルートsvg要素の属性だけを操作する
           const svgAttributes = svg[0][':@'];
           if (svgAttributes.$$xmlns !== 'http://www.w3.org/2000/svg') {
