@@ -333,11 +333,21 @@ suite('Extension Test Suite', () => {
   });
 
   test('actual edit', async () => {
+using _l = mock(vscode.env, 'language', 'en');
+    using _c = mock(
+      vscode.workspace,
+      'getConfiguration',
+      () => ({}) as unknown as vscode.WorkspaceConfiguration,
+    );
+    using _t = mock(vscode.window, 'activeColorTheme', {
+      kind: vscode.ColorThemeKind.Light,
+    });
     const extension = vscode.extensions.getExtension(
       'sugoroku-y.svg-preview-on-code',
     );
     assert.ok(extension?.isActive);
     const e: SvgPreviewOnCode = await extension.activate();
+(e as any).reset();
     const yields: unknown[][] = [];
     using _ = mock(
       e,
@@ -372,7 +382,7 @@ suite('Extension Test Suite', () => {
       (yields[1][0] as any).hoverMessage.value,
       `### SVG Preview
 
-![](data:image/svg+xml;base64,PHN2ZyBjb2xvcj0id2hpdGUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIvPg==)
+![](data:image/svg+xml;base64,PHN2ZyBjb2xvcj0iYmxhY2siIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIvPg==)
 
 [$(gear) Settings](command:workbench.action.openSettings?["@ext:sugoroku-y.svg-preview-on-code"])`,
     );
