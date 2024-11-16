@@ -195,7 +195,7 @@ export class SvgPreviewOnCode {
     for (const { index, 0: match } of document
       .getText()
       .matchAll(
-        /<svg.*?>.*?<\/svg>|\bdata:image\/\w+(?:\+\w+)?;base64,(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}[A-Za-z0-9+/=]=)?/gs,
+        /<svg.*?>.*?<\/svg>|\bdata:image\/\w+(?:\+\w+)?;base64,(?=[A-Za-z0-9+/])(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}[A-Za-z0-9+/=]=)?(?![A-Za-z0-9+/=])/gs,
       )) {
       const normalized = match.startsWith('data:')
         ? // dataスキームはキャッシュ対象外
