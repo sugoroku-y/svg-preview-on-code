@@ -333,7 +333,7 @@ suite('Extension Test Suite', () => {
   });
 
   test('actual edit', async () => {
-using _l = mock(vscode.env, 'language', 'en');
+    using _l = mock(vscode.env, 'language', 'en');
     using _c = mock(
       vscode.workspace,
       'getConfiguration',
@@ -347,7 +347,7 @@ using _l = mock(vscode.env, 'language', 'en');
     );
     assert.ok(extension?.isActive);
     const e: SvgPreviewOnCode = await extension.activate();
-(e as any).reset();
+    (e as any).reset();
     const yields: unknown[][] = [];
     using _ = mock(
       e,
@@ -408,5 +408,47 @@ using _l = mock(vscode.env, 'language', 'en');
 
 ![](data:image/png;base64,AAAA)`,
     );
+  }).timeout(10000);
+
+  test('actual edit2', async () => {
+    using _l = mock(vscode.env, 'language', 'en');
+    using _c = mock(
+      vscode.workspace,
+      'getConfiguration',
+      () => ({}) as unknown as vscode.WorkspaceConfiguration,
+    );
+    using _t = mock(vscode.window, 'activeColorTheme', {
+      kind: vscode.ColorThemeKind.Light,
+    });
+    const extension = vscode.extensions.getExtension(
+      'sugoroku-y.svg-preview-on-code',
+    );
+    assert.ok(extension?.isActive);
+    const e: SvgPreviewOnCode = await extension.activate();
+    (e as any).reset();
+    const yields: unknown[][] = [];
+    using _ = mock(
+      e,
+      'svgPreviewDecorations',
+      function* (this: typeof e, document) {
+        const ys: unknown[] = [];
+        yields.push(ys);
+        const g = (
+          this as unknown as { [saved]: typeof e.svgPreviewDecorations }
+        )[saved](document);
+        for (const e of g) {
+          ys.push(e);
+          yield e;
+        }
+      },
+    );
+    const document = await vscode.workspace.openTextDocument();
+    const editor = await vscode.window.showTextDocument(document);
+    assert.deepEqual(yields, [[]]);
+    await editor.edit((builder) => {
+      builder.insert(document.positionAt(0), `<svg></svg>`);
+    });
+    await new Promise((r) => setTimeout(r, 500));
+    assert.deepEqual(yields, [[], []]);
   }).timeout(10000);
 });
