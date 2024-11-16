@@ -233,19 +233,19 @@ export class SvgPreviewOnCode {
             // 名前空間がSVGのものでなければ無視する
             throw SvgPreviewOnCode.IgnoreError;
           }
-let size: { $$width: number; $$height: number } | undefined;
+          let size: { $$width: number; $$height: number } | undefined;
           if (this.size) {
-          const width = Number(svgAttributes.$$width) || undefined;
-          const height = Number(svgAttributes.$$height) || undefined;
-          size =
-            !width || !height
-              ? { $$width: this.size, $$height: this.size }
-              : width < height
-                ? {
+            const width = Number(svgAttributes.$$width) || undefined;
+            const height = Number(svgAttributes.$$height) || undefined;
+            size =
+              !width || !height
+                ? { $$width: this.size, $$height: this.size }
+                : width < height
+                  ? {
                       $$width: (width / height) * this.size,
                       $$height: this.size,
                     }
-                : {
+                  : {
                       $$width: this.size,
                       $$height: (height / width) * this.size,
                     };
@@ -279,7 +279,6 @@ let size: { $$width: number; $$height: number } | undefined;
             `![](${url})`,
             `[$(gear) ${localeString('preview.settings')}](command:workbench.action.openSettings?["@ext:sugoroku-y.svg-preview-on-code"])`,
           ].join('\n\n'),
-
           true,
         );
         hoverMessage.isTrusted = {
