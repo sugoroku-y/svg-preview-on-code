@@ -64,9 +64,9 @@ This extension contributes the following settings:
 
 - `svg-preview-on-code.size`:
 
-  Specifies the size of the preview. If omitted, it will be 50 pixels.
+  Specifies the size of the preview. If omitted, the image will be displayed in its original size as much as possible.
 
-  プレビューのサイズを指定します。省略時には50ピクセルになります。
+  プレビューのサイズを指定します。省略時にはできるだけ元の画像のサイズで表示します。
 
 - `svg-preview-on-code.currentColor`
 
