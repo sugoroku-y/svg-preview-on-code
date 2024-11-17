@@ -2,6 +2,12 @@
 
 ## Release
 
+- `0.0.8`
+
+  - Icon image updated
+
+  > - アイコン画像を更新
+
 - `0.0.7`
 
   - Changed not to adjust size when size in settings is omitted
