@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8"/>
+    <title>Converter</title>
+    <script>
+      window.addEventListener('load', () => {
+        const w = localStorage.getItem('width')
+        if (w) {
+          canvas.width = Number(w);
+        }
+        width.value = canvas.width;
+        const h = localStorage.getItem('height')
+        if (h) {
+          canvas.height = Number(h);
+        }
+        height.value = canvas.height;
+        width.addEventListener('change', () => {
+          canvas.width = Number(width.value);
+          localStorage.setItem('width', width.value);
+          reload();
+        });
+        height.addEventListener('change', () => {
+          canvas.height = Number(height.value);
+          localStorage.setItem('height', height.value);
+          reload();
+        });
+        file.addEventListener('change', () => {
+          reload();
+        })
+        clear.addEventListener('click', () => {
+          file.value='';
+          reload();
+        })
+        async function reload() {
+          const context = canvas.getContext('2d');
+          context.clearRect(0,0,canvas.width,canvas.height);
+          if (!file.files[0]) {
+            download.removeAttribute('href');
+            download.removeAttribute('download');
+            return;
+          }
+          const reader = new FileReader();
+          reader.readAsDataURL(file.files[0]);
+          await new Promise(resolve => {
+            reader.addEventListener('load', () => {
+              resolve();
+            },{once:true});
+          });
+          const url =reader.result;
+          const image = new Image();
+          image.src = url;
+          await new Promise(resolve => {
+            image.addEventListener('load', () => {
+              resolve();
+            }, {once:true});
+          });
+          context.drawImage(image, 0, 0, canvas.width, canvas.height)
+          download.href=canvas.toDataURL();
+          download.download = `${file.files[0].name.match(/^.*(?=\.[^.]+$)/)?.[0] ?? 'image'}.png`;
+        }
+      });
+    </script>
+    <style>
+      #canvas {
+        background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAANklEQVQ4T2N0cHD4z0AEaGhoIEIVAwPjqIE4w2k0DHEGzRBINgcOHKBuThk1kPKcMhqGgy8MAal4UAF1Mf8eAAAAAElFTkSuQmCC);
+      }
+    </style>
+  </head>
+  <div><canvas id="canvas"/></div>
+  <div>
+    <label>width: <input type="number" id="width"/></label>
+    <label>height: <input type="number" id="height"/></label>
+  </div>
+  <div><input type="file" id="file"/><button id="clear">clear</button></div>
+  <a id="download">download</a>
+</html>
