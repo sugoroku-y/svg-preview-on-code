@@ -2,7 +2,7 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { createReadStream } from 'fs';
 import { createInterface } from 'readline';
-import { SvgPreviewOnCode } from '../extension';
+import { SvgPreviewOnCode } from '../SvgPreviewOnCode';
 import { resolve } from 'path';
 import { XMLParser } from 'fast-xml-parser';
 
