@@ -6,6 +6,13 @@ import { SvgPreviewOnCode } from '../SvgPreviewOnCode';
 import { resolve } from 'path';
 import { XMLParser } from 'fast-xml-parser';
 
+type Accessiblize<T, K extends PropertyKey> = Omit<T, K> &
+  Record<
+    K,
+    // @ts-expect-error privateメンバーにアクセスするために必要
+    T[K]
+  >;
+
 class MockTextDocument implements vscode.TextDocument {
   uri!: vscode.Uri;
   fileName!: string;
@@ -349,12 +356,10 @@ suite('Extension Test Suite', () => {
       'sugoroku-y.svg-preview-on-code',
     );
     assert.ok(extension?.isActive);
-    const e = (await extension.activate()) as {
-      reset(): void;
-      svgPreviewDecorations(
-        document: vscode.TextDocument,
-      ): Generator<vscode.DecorationOptions, void, undefined>;
-    };
+    const e = (await extension.activate()) as Accessiblize<
+      SvgPreviewOnCode,
+      'reset'
+    >;
     e.reset();
     const yields: unknown[][] = [];
     using _ = mock(
@@ -434,12 +439,10 @@ suite('Extension Test Suite', () => {
       'sugoroku-y.svg-preview-on-code',
     );
     assert.ok(extension?.isActive);
-    const e = (await extension.activate()) as {
-      reset(): void;
-      svgPreviewDecorations(
-        document: vscode.TextDocument,
-      ): Generator<vscode.DecorationOptions, void, undefined>;
-    };
+    const e = (await extension.activate()) as Accessiblize<
+      SvgPreviewOnCode,
+      'reset'
+    >;
     e.reset();
     const yields: unknown[][] = [];
     using _ = mock(
@@ -480,8 +483,12 @@ suite('Extension Test Suite', () => {
       'sugoroku-y.svg-preview-on-code',
     );
     assert.ok(extension?.isActive);
-    const e = (await extension.activate()) as { reset(): void };
+    const e = (await extension.activate()) as Accessiblize<
+      SvgPreviewOnCode,
+      'reset'
+    >;
     e.reset();
+    assert.throws(() => e.activate({} as vscode.ExtensionContext));
     const document = await vscode.workspace.openTextDocument();
     const editor = await vscode.window.showTextDocument(document);
     await editor.edit((builder) => {
@@ -499,6 +506,13 @@ suite('Extension Test Suite', () => {
       builder.insert(
         document.positionAt(document.getText().length),
         '<svg a=""></svg>\n\n',
+      );
+    });
+    await new Promise((r) => setTimeout(r, 500));
+    await editor.edit((builder) => {
+      builder.insert(
+        document.positionAt(document.getText().length),
+        '<svg a="></svg>\n\n',
       );
     });
     await new Promise((r) => setTimeout(r, 500));

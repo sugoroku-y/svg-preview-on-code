@@ -55,6 +55,8 @@
     "watch": "tsc -watch -p ./",
     "prelint": "npm run compile",
     "lint": "eslint src",
+    "precoverage": "npm run lint",
+    "coverage": "vscode-test --coverage --coverage-reporter text lcovonly clover",
     "pretest": "npm run lint",
     "test": "vscode-test"
   },
