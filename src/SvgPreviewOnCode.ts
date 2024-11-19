@@ -39,12 +39,13 @@ export class SvgPreviewOnCode {
       throw new Error();
     }
     this.activated = true;
-    const instance = this;
-    context.subscriptions.push({
-      dispose() {
-        instance.deactivate();
-      },
-    });
+    context.subscriptions.push(
+      ((instance) => ({
+        dispose() {
+          instance.deactivate();
+        },
+      }))(this),
+    );
 
     this.update(vscode.window.activeTextEditor);
 
@@ -103,12 +104,12 @@ export class SvgPreviewOnCode {
 
   private reset() {
     const config = vscode.workspace.getConfiguration('svg-preview-on-code');
-    this.size = config.size;
+    this.size = config.size as number;
     this.urlCache = new WeakMap<vscode.TextDocument, Map<string, string>>();
     this.preset = {
       // currentColorに使用される色を指定する
       $$color:
-        config.currentColor ||
+        (config.currentColor as string) ||
         {
           [vscode.ColorThemeKind.Dark]: 'white',
           [vscode.ColorThemeKind.HighContrast]: 'white',
@@ -117,7 +118,7 @@ export class SvgPreviewOnCode {
         }[vscode.window.activeColorTheme.kind],
     };
     if (config.preset) {
-      for (const [name, value] of Object.entries(config.preset)) {
+      for (const [name, value] of Object.entries(config.preset as object)) {
         if (
           // SVGのプレゼンテーション属性のみ受け付ける
           isSvgPresentationAttribute(name) &&
@@ -158,7 +159,7 @@ export class SvgPreviewOnCode {
     }
   }
 
-  private static readonly IgnoreError = {};
+  private static readonly IgnoreError = {} as Error;
 
   *svgPreviewDecorations(
     document: vscode.TextDocument,
@@ -195,7 +196,12 @@ export class SvgPreviewOnCode {
           // 無ければsvgをparse
           const svg = (() => {
             try {
-              return this.parser.parse(normalized);
+              return this.parser.parse(normalized) as [
+                {
+                  ':@': Record<`$$${string}`, string | number>;
+                  svg: unknown[];
+                },
+              ];
             } catch {
               // parseで発生するエラーは無視するエラーに置き換えて投げ直す
               throw SvgPreviewOnCode.IgnoreError;
@@ -243,7 +249,7 @@ export class SvgPreviewOnCode {
           };
           // Base64エンコードしてDataスキームURIにする
           const newUrl = `data:image/svg+xml;base64,${Buffer.from(
-            this.builder.build(svg),
+            this.builder.build(svg) as string,
           ).toString('base64')}`;
           // 生成した画像URLはキャッシュしておく
           nextMap.set(normalized, newUrl);

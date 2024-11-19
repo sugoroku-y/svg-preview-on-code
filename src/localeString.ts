@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 import * as vscode from 'vscode';
 
 let cache: Record<string, string>;
@@ -7,11 +8,14 @@ export function localeString(key: string): string {
   if (language !== vscode.env.language) {
     language = vscode.env.language;
     cache = {
-      ...require(`../package.nls.json`),
+      ...(require('../package.nls.json') as Record<string, string>),
       ...(() => {
         try {
           // 多言語対応していれば読み込み
-          return require(`../package.nls.${language}.json`);
+          return require(`../package.nls.${language}.json`) as Record<
+            string,
+            string
+          >;
         } catch (ex) {
           if (
             ex instanceof Error &&

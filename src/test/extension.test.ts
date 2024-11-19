@@ -47,36 +47,36 @@ class MockTextDocument implements vscode.TextDocument {
       isEmptyOrWhitespace!: boolean;
     })();
   }
-  offsetAt(position: vscode.Position): number {
+  offsetAt(_position: vscode.Position): number {
     throw new Error('Method not implemented.');
   }
   positionAt(offset: number): vscode.Position {
     let line = 0;
     let bol = 0,
       eol = this.lines[0].length + 1;
-    do {
+    for (;;) {
       if (offset < eol) {
         break;
       }
       ++line;
       bol = eol;
       eol += this.lines[line].length + 1;
-    } while (true);
+    }
     return new vscode.Position(line, offset - bol);
   }
-  getText(range?: vscode.Range): string {
+  getText(_range?: vscode.Range): string {
     return this.lines.join('\n');
   }
   getWordRangeAtPosition(
-    position: vscode.Position,
-    regex?: RegExp,
+    _position: vscode.Position,
+    _regex?: RegExp,
   ): vscode.Range | undefined {
     throw new Error('Method not implemented.');
   }
-  validateRange(range: vscode.Range): vscode.Range {
+  validateRange(_range: vscode.Range): vscode.Range {
     throw new Error('Method not implemented.');
   }
-  validatePosition(position: vscode.Position): vscode.Position {
+  validatePosition(_position: vscode.Position): vscode.Position {
     throw new Error('Method not implemented.');
   }
 
@@ -89,7 +89,7 @@ function getPropertyDescriptor(
   target: object,
   key: PropertyKey,
 ): PropertyDescriptor | undefined {
-  for (let o = target; o; o = Object.getPrototypeOf(o)) {
+  for (let o = target; o; o = Object.getPrototypeOf(o) as object) {
     const desc = Object.getOwnPropertyDescriptor(o, key);
     if (desc) {
       return desc;
@@ -130,8 +130,8 @@ function mock<T extends object, K extends keyof T>(
 suite('Extension Test Suite', () => {
   vscode.window.showInformationMessage('Start all tests.');
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg"></svg>`;
-  const dataScheme = `data:image/png;base64,AAAA`;
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg"></svg>';
+  const dataScheme = 'data:image/png;base64,AAAA';
   function decoration(
     spec: {
       text: string;
@@ -182,7 +182,7 @@ suite('Extension Test Suite', () => {
     assert.ok(decoration);
     assert.ok(decoration.hoverMessage instanceof vscode.MarkdownString);
     assert.match(
-      (decoration.hoverMessage as vscode.MarkdownString).value,
+      decoration.hoverMessage.value,
       /^### (.*)\n\n!\[\]\(data:(.*?);base64,([A-Za-z0-9+/]+=*)\)(?:\n\n\[\$\(gear\) (.*)\]\(command:workbench.action.openSettings\?\["@ext:sugoroku-y.svg-preview-on-code"\]\))?$/,
     );
     const previewTitle = RegExp.$1;
@@ -195,7 +195,9 @@ suite('Extension Test Suite', () => {
         ignoreAttributes: false,
         attributeNamePrefix: '$$',
       });
-      const svg = parser.parse(decoded);
+      const svg = parser.parse(decoded) as [
+        { ':@': Record<`$$${string}`, number | string>; svg: unknown[] },
+      ];
       const attributes = svg[0][':@'];
       assert.equal(attributes.$$color, expect.currentColor ?? 'black');
       assert.equal(attributes.$$xmlns, 'http://www.w3.org/2000/svg');
@@ -313,7 +315,8 @@ suite('Extension Test Suite', () => {
   });
 
   test('Changelog', async () => {
-    const { version } = require('../../package.json');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { version } = require('../../package.json') as { version: string };
     const stream = createInterface(
       createReadStream(resolve(__dirname, '..', '..', 'CHANGELOG.md')),
     );
@@ -346,8 +349,13 @@ suite('Extension Test Suite', () => {
       'sugoroku-y.svg-preview-on-code',
     );
     assert.ok(extension?.isActive);
-    const e: SvgPreviewOnCode = await extension.activate();
-    (e as any).reset();
+    const e = (await extension.activate()) as {
+      reset(): void;
+      svgPreviewDecorations(
+        document: vscode.TextDocument,
+      ): Generator<vscode.DecorationOptions, void, undefined>;
+    };
+    e.reset();
     const yields: unknown[][] = [];
     using _ = mock(
       e,
@@ -379,7 +387,8 @@ suite('Extension Test Suite', () => {
       '{"range":[{"line":0,"character":0},{"line":0,"character":46}],"hoverMessage":{}}',
     );
     assert.equal(
-      (yields[1][0] as any).hoverMessage.value,
+      (yields[1][0] as { hoverMessage: vscode.MarkdownString }).hoverMessage
+        .value,
       `### SVG Preview
 
 ![](data:image/svg+xml;base64,PHN2ZyBjb2xvcj0iYmxhY2siIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIvPg==)
@@ -403,7 +412,8 @@ suite('Extension Test Suite', () => {
       '{"range":[{"line":0,"character":0},{"line":0,"character":26}],"hoverMessage":{}}',
     );
     assert.equal(
-      (yields[2][0] as any).hoverMessage.value,
+      (yields[2][0] as { hoverMessage: vscode.MarkdownString }).hoverMessage
+        .value,
       `### Data URL Preview
 
 ![](data:image/png;base64,AAAA)`,
@@ -424,8 +434,13 @@ suite('Extension Test Suite', () => {
       'sugoroku-y.svg-preview-on-code',
     );
     assert.ok(extension?.isActive);
-    const e: SvgPreviewOnCode = await extension.activate();
-    (e as any).reset();
+    const e = (await extension.activate()) as {
+      reset(): void;
+      svgPreviewDecorations(
+        document: vscode.TextDocument,
+      ): Generator<vscode.DecorationOptions, void, undefined>;
+    };
+    e.reset();
     const yields: unknown[][] = [];
     using _ = mock(
       e,
@@ -446,7 +461,7 @@ suite('Extension Test Suite', () => {
     const editor = await vscode.window.showTextDocument(document);
     assert.deepEqual(yields, [[]]);
     await editor.edit((builder) => {
-      builder.insert(document.positionAt(0), `<svg></svg>`);
+      builder.insert(document.positionAt(0), '<svg></svg>');
     });
     await new Promise((r) => setTimeout(r, 500));
     assert.deepEqual(yields, [[], []]);
@@ -465,7 +480,7 @@ suite('Extension Test Suite', () => {
       'sugoroku-y.svg-preview-on-code',
     );
     assert.ok(extension?.isActive);
-    const e = await extension.activate();
+    const e = (await extension.activate()) as { reset(): void };
     e.reset();
     const document = await vscode.workspace.openTextDocument();
     const editor = await vscode.window.showTextDocument(document);
@@ -476,41 +491,41 @@ suite('Extension Test Suite', () => {
     await editor.edit((builder) => {
       builder.insert(
         document.positionAt(document.getText().length),
-        `\n\n<svg ><!--</svg>`,
+        '\n\n<svg ><!--</svg>',
       );
     });
     await new Promise((r) => setTimeout(r, 500));
     await editor.edit((builder) => {
       builder.insert(
         document.positionAt(document.getText().length),
-        `<svg a=""></svg>\n\n`,
+        '<svg a=""></svg>\n\n',
       );
     });
     await new Promise((r) => setTimeout(r, 500));
     await editor.edit((builder) => {
       builder.insert(
         document.positionAt(document.getText().length),
-        `<svg ></svg>\n\n`,
+        '<svg ></svg>\n\n',
       );
     });
     await new Promise((r) => setTimeout(r, 500));
     await editor.edit((builder) => {
       builder.insert(
         document.positionAt(document.getText().length),
-        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50"><path d="M0 0a5 5 0 0 0 5 5 10 10 0 0 1 10 10 15 15 0 0 0 15 15 20 20 0 0 1 20 20" fill="none" stroke="currentColor"/></svg>\n\n`,
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50"><path d="M0 0a5 5 0 0 0 5 5 10 10 0 0 1 10 10 15 15 0 0 0 15 15 20 20 0 0 1 20 20" fill="none" stroke="currentColor"/></svg>\n\n',
       );
     });
     await new Promise((r) => setTimeout(r, 500));
     await editor.edit((builder) => {
       builder.insert(
         document.positionAt(document.getText().length),
-        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="100" height="25"><path d="M0 0a5 5 0 0 0 5 5 10 10 0 0 1 10 10 15 15 0 0 0 15 15 20 20 0 0 1 20 20" fill="none" stroke="currentColor"/></svg>\n\n`,
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="100" height="25"><path d="M0 0a5 5 0 0 0 5 5 10 10 0 0 1 10 10 15 15 0 0 0 15 15 20 20 0 0 1 20 20" fill="none" stroke="currentColor"/></svg>\n\n',
       );
     });
     await editor.edit((builder) => {
       builder.insert(
         document.positionAt(document.getText().length),
-        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="25" height="100"><path d="M0 0a5 5 0 0 0 5 5 10 10 0 0 1 10 10 15 15 0 0 0 15 15 20 20 0 0 1 20 20" fill="none" stroke="currentColor"/></svg>\n\n`,
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="25" height="100"><path d="M0 0a5 5 0 0 0 5 5 10 10 0 0 1 10 10 15 15 0 0 0 15 15 20 20 0 0 1 20 20" fill="none" stroke="currentColor"/></svg>\n\n',
       );
     });
     await new Promise((r) => setTimeout(r, 500));
@@ -523,7 +538,7 @@ suite('Extension Test Suite', () => {
       );
       builder.insert(
         document.positionAt(document.getText().length),
-        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50"><path d="M0 0a5 5 0 0 0 5 5 10 10 0 0 1 10 10 15 15 0 0 0 15 15 20 20 0 0 1 20 20" fill="none" stroke="currentColor"/></svg>\n\n`,
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50"><path d="M0 0a5 5 0 0 0 5 5 10 10 0 0 1 10 10 15 15 0 0 0 15 15 20 20 0 0 1 20 20" fill="none" stroke="currentColor"/></svg>\n\n',
       );
     });
     await new Promise((r) => setTimeout(r, 500));
