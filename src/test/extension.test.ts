@@ -451,4 +451,97 @@ suite('Extension Test Suite', () => {
     await new Promise((r) => setTimeout(r, 500));
     assert.deepEqual(yields, [[], []]);
   }).timeout(10000);
+  test('change Theme', async () => {
+    using _l = mock(vscode.env, 'language', 'en');
+    using _c = mock(
+      vscode.workspace,
+      'getConfiguration',
+      () => ({ size: 25 }) as unknown as vscode.WorkspaceConfiguration,
+    );
+    using _t = mock(vscode.window, 'activeColorTheme', {
+      kind: vscode.ColorThemeKind.Light,
+    });
+    const extension = vscode.extensions.getExtension(
+      'sugoroku-y.svg-preview-on-code',
+    );
+    assert.ok(extension?.isActive);
+    const e = await extension.activate();
+    e.reset();
+    const document = await vscode.workspace.openTextDocument();
+    const editor = await vscode.window.showTextDocument(document);
+    await editor.edit((builder) => {
+      builder.insert(document.positionAt(0), svg);
+    });
+    await new Promise((r) => setTimeout(r, 500));
+    await editor.edit((builder) => {
+      builder.insert(
+        document.positionAt(document.getText().length),
+        `\n\n<svg ><!--</svg>`,
+      );
+    });
+    await new Promise((r) => setTimeout(r, 500));
+    await editor.edit((builder) => {
+      builder.insert(
+        document.positionAt(document.getText().length),
+        `<svg a=""></svg>\n\n`,
+      );
+    });
+    await new Promise((r) => setTimeout(r, 500));
+    await editor.edit((builder) => {
+      builder.insert(
+        document.positionAt(document.getText().length),
+        `<svg ></svg>\n\n`,
+      );
+    });
+    await new Promise((r) => setTimeout(r, 500));
+    await editor.edit((builder) => {
+      builder.insert(
+        document.positionAt(document.getText().length),
+        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50"><path d="M0 0a5 5 0 0 0 5 5 10 10 0 0 1 10 10 15 15 0 0 0 15 15 20 20 0 0 1 20 20" fill="none" stroke="currentColor"/></svg>\n\n`,
+      );
+    });
+    await new Promise((r) => setTimeout(r, 500));
+    await editor.edit((builder) => {
+      builder.insert(
+        document.positionAt(document.getText().length),
+        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="100" height="25"><path d="M0 0a5 5 0 0 0 5 5 10 10 0 0 1 10 10 15 15 0 0 0 15 15 20 20 0 0 1 20 20" fill="none" stroke="currentColor"/></svg>\n\n`,
+      );
+    });
+    await editor.edit((builder) => {
+      builder.insert(
+        document.positionAt(document.getText().length),
+        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="25" height="100"><path d="M0 0a5 5 0 0 0 5 5 10 10 0 0 1 10 10 15 15 0 0 0 15 15 20 20 0 0 1 20 20" fill="none" stroke="currentColor"/></svg>\n\n`,
+      );
+    });
+    await new Promise((r) => setTimeout(r, 500));
+    await editor.edit((builder) => {
+      builder.delete(
+        new vscode.Range(
+          document.positionAt(0),
+          document.positionAt(document.getText().length),
+        ),
+      );
+      builder.insert(
+        document.positionAt(document.getText().length),
+        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50"><path d="M0 0a5 5 0 0 0 5 5 10 10 0 0 1 10 10 15 15 0 0 0 15 15 20 20 0 0 1 20 20" fill="none" stroke="currentColor"/></svg>\n\n`,
+      );
+    });
+    await new Promise((r) => setTimeout(r, 500));
+    await vscode.commands.executeCommand(
+      'workbench.action.toggleLightDarkThemes',
+    );
+    await editor.edit((builder) => {
+      builder.delete(
+        new vscode.Range(
+          document.positionAt(0),
+          document.positionAt(document.getText().length),
+        ),
+      );
+    });
+    await new Promise((r) => setTimeout(r, 500));
+    await vscode.commands.executeCommand(
+      'workbench.action.toggleLightDarkThemes',
+    );
+    await new Promise((r) => setTimeout(r, 500));
+  }).timeout(10000);
 });
