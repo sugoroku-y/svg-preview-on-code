@@ -4,6 +4,15 @@ An extension to preview SVG on the editor of VS Code.
 
 VS Codeのエディター上でSVGをプレビューするための拡張です。
 
+![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/sugoroku-y.svg-preview-on-code)
+![Visual Studio Marketplace Installs](https://img.shields.io/visual-studio-marketplace/i/sugoroku-y.svg-preview-on-code)
+[![TypeScript](https://img.shields.io/badge/-TypeScript-404040.svg?logo=TypeScript)](https://www.typescriptlang.org/)
+[![JavaScript](https://img.shields.io/badge/-JavaScript-404040.svg?logo=javascript)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=flat)](./LICENSE)
+[![Coverage Status](https://coveralls.io/repos/github/sugoroku-y/svg-preview-on-code/badge.svg)](https://coveralls.io/github/sugoroku-y/svg-preview-on-code)
+[![TEST](https://github.com/sugoroku-y/svg-preview-on-code/actions/workflows/test.yml/badge.svg)](https://github.com/sugoroku-y/svg-preview-on-code/actions/workflows/test.yml)
+[![Deploy Extension](https://github.com/sugoroku-y/svg-preview-on-code/actions/workflows/deploy.yml/badge.svg)](https://github.com/sugoroku-y/svg-preview-on-code/actions/workflows/deploy.yml)
+
 ## Features
 
 Bring the mouse cursor over the SVG present in the editor to see a preview.
