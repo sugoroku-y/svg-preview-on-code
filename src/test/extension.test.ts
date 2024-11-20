@@ -6,12 +6,10 @@ import { SvgPreviewOnCode } from '../SvgPreviewOnCode';
 import { resolve } from 'path';
 import { XMLParser } from 'fast-xml-parser';
 
-type Accessiblize<T, K extends PropertyKey> = Omit<T, K> &
-  Record<
-    K,
-    // @ts-expect-error privateメンバーにアクセスするために必要
-    T[K]
-  >;
+type Accessiblize<T, K extends PropertyKey> = Omit<T, K> & {
+  // @ts-expect-error privateメンバーにアクセスするために必要
+  [KK in K]: T[KK];
+};
 
 class MockTextDocument implements vscode.TextDocument {
   uri!: vscode.Uri;
