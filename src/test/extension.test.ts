@@ -103,33 +103,55 @@ function getPropertyDescriptor(
   return undefined;
 }
 
-const saved = Symbol();
-
 function mock<T extends object, K extends keyof T>(
   target: T,
   key: K,
   replace: T[K],
-): { [Symbol.dispose](): void } {
+): { original: T[K]; [Symbol.dispose](): void } {
   const desc = getPropertyDescriptor(target, key);
   if (!desc) {
     throw new Error(`unknown property: '${String(key)}'`);
   }
+  const original = target[key];
   if ((desc.get && !desc.set) || (!desc.get && !desc.set && !desc.writable)) {
     Object.defineProperty(target, key, { get: () => replace });
     return {
+      original,
       [Symbol.dispose]() {
         Object.defineProperty(target, key, desc);
       },
     };
   }
-  const save = target[key];
-  (target as { [saved]: T[K] })[saved] = save;
   target[key] = replace;
   return {
+    original,
     [Symbol.dispose]() {
-      target[key] = save;
+      target[key] = original;
     },
   };
+}
+
+function mockGenerator<
+  K extends PropertyKey,
+  F extends (
+    this: object,
+    ...args: never
+  ) => Generator<unknown, void, undefined>,
+>(e: Record<K, F>, key: K) {
+  const yields: unknown[][] = [];
+  const mocked = Object.assign(
+    mock(e, key, function* (this: typeof e, ...args) {
+      const ys: unknown[] = [];
+      yields.push(ys);
+      const g = mocked.original.apply(this, args);
+      for (const e of g) {
+        ys.push(e);
+        yield e;
+      }
+    } as F),
+    { yields },
+  );
+  return mocked;
 }
 
 suite('Extension Test Suite', () => {
@@ -377,33 +399,18 @@ suite('Extension Test Suite', () => {
       'reset' | 'svgPreviewDecorations'
     >;
     e.reset();
-    const yields: unknown[][] = [];
-    using _ = mock(
-      e,
-      'svgPreviewDecorations',
-      function* (this: typeof e, document) {
-        const ys: unknown[] = [];
-        yields.push(ys);
-        const g = (
-          this as unknown as { [saved]: typeof e.svgPreviewDecorations }
-        )[saved](document);
-        for (const e of g) {
-          ys.push(e);
-          yield e;
-        }
-      },
-    );
+    using mocked = mockGenerator(e, 'svgPreviewDecorations');
     await using document = await openTextDocument();
     const editor = await vscode.window.showTextDocument(document);
-    assert.deepEqual(yields, [[]]);
-    await new Promise((r) => setTimeout(r, 1000));
+    assert.deepEqual(mocked.yields, [[]]);
+    await timeout(1000);
     await editor.edit((builder) => {
       builder.insert(document.positionAt(0), svg);
     });
-    await new Promise((r) => setTimeout(r, 500));
-    assert.equal(yields.length, 2);
-    assert.equal(yields[1].length, 1);
-    const second = yields[1][0];
+    await timeout(500);
+    assert.equal(mocked.yields.length, 2);
+    assert.equal(mocked.yields[1].length, 1);
+    const second = mocked.yields[1][0];
     assert.ok(typeof second === 'object' && second);
     assert.ok('range' in second && second.range instanceof vscode.Range);
     assert.ok('hoverMessage' in second && Array.isArray(second.hoverMessage));
@@ -433,10 +440,10 @@ suite('Extension Test Suite', () => {
       );
       builder.insert(document.positionAt(0), dataScheme);
     });
-    await new Promise((r) => setTimeout(r, 500));
-    assert.equal(yields.length, 3);
-    assert.equal(yields[2].length, 1);
-    const third = yields[2][0];
+    await timeout(500);
+    assert.equal(mocked.yields.length, 3);
+    assert.equal(mocked.yields[2].length, 1);
+    const third = mocked.yields[2][0];
     assert.ok(typeof third === 'object' && third);
     assert.ok('range' in third && third.range instanceof vscode.Range);
     assert.ok('hoverMessage' in third && Array.isArray(third.hoverMessage));
@@ -473,30 +480,15 @@ suite('Extension Test Suite', () => {
       'reset' | 'svgPreviewDecorations'
     >;
     e.reset();
-    const yields: unknown[][] = [];
-    using _ = mock(
-      e,
-      'svgPreviewDecorations',
-      function* (this: typeof e, document) {
-        const ys: unknown[] = [];
-        yields.push(ys);
-        const g = (
-          this as unknown as { [saved]: typeof e.svgPreviewDecorations }
-        )[saved](document);
-        for (const e of g) {
-          ys.push(e);
-          yield e;
-        }
-      },
-    );
+    using mocked = mockGenerator(e, 'svgPreviewDecorations');
     await using document = await openTextDocument();
     const editor = await vscode.window.showTextDocument(document);
-    assert.deepEqual(yields, [[]]);
+    assert.deepEqual(mocked.yields, [[]]);
     await editor.edit((builder) => {
       builder.insert(document.positionAt(0), '<svg></svg>');
     });
-    await new Promise((r) => setTimeout(r, 500));
-    assert.deepEqual(yields, [[], []]);
+    await timeout(500);
+    assert.deepEqual(mocked.yields, [[], []]);
   }).timeout(10000);
   test('change Theme', async () => {
     using _l = mock(vscode.env, 'language', 'en');
@@ -523,42 +515,42 @@ suite('Extension Test Suite', () => {
     await editor.edit((builder) => {
       builder.insert(document.positionAt(0), svg);
     });
-    await new Promise((r) => setTimeout(r, 500));
+    await timeout(500);
     await editor.edit((builder) => {
       builder.insert(
         document.positionAt(document.getText().length),
         '\n\n<svg ><!--</svg>',
       );
     });
-    await new Promise((r) => setTimeout(r, 500));
+    await timeout(500);
     await editor.edit((builder) => {
       builder.insert(
         document.positionAt(document.getText().length),
         '<svg a=""></svg>\n\n',
       );
     });
-    await new Promise((r) => setTimeout(r, 500));
+    await timeout(500);
     await editor.edit((builder) => {
       builder.insert(
         document.positionAt(document.getText().length),
         '<svg a="></svg>\n\n',
       );
     });
-    await new Promise((r) => setTimeout(r, 500));
+    await timeout(500);
     await editor.edit((builder) => {
       builder.insert(
         document.positionAt(document.getText().length),
         '<svg ></svg>\n\n',
       );
     });
-    await new Promise((r) => setTimeout(r, 500));
+    await timeout(500);
     await editor.edit((builder) => {
       builder.insert(
         document.positionAt(document.getText().length),
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50"><path d="M0 0a5 5 0 0 0 5 5 10 10 0 0 1 10 10 15 15 0 0 0 15 15 20 20 0 0 1 20 20" fill="none" stroke="currentColor"/></svg>\n\n',
       );
     });
-    await new Promise((r) => setTimeout(r, 500));
+    await timeout(500);
     await editor.edit((builder) => {
       builder.insert(
         document.positionAt(document.getText().length),
@@ -571,7 +563,7 @@ suite('Extension Test Suite', () => {
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="25" height="100"><path d="M0 0a5 5 0 0 0 5 5 10 10 0 0 1 10 10 15 15 0 0 0 15 15 20 20 0 0 1 20 20" fill="none" stroke="currentColor"/></svg>\n\n',
       );
     });
-    await new Promise((r) => setTimeout(r, 500));
+    await timeout(500);
     await editor.edit((builder) => {
       builder.delete(
         new vscode.Range(
@@ -584,7 +576,7 @@ suite('Extension Test Suite', () => {
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50"><path d="M0 0a5 5 0 0 0 5 5 10 10 0 0 1 10 10 15 15 0 0 0 15 15 20 20 0 0 1 20 20" fill="none" stroke="currentColor"/></svg>\n\n',
       );
     });
-    await new Promise((r) => setTimeout(r, 500));
+    await timeout(500);
     await vscode.commands.executeCommand(
       'workbench.action.toggleLightDarkThemes',
     );
@@ -596,11 +588,11 @@ suite('Extension Test Suite', () => {
         ),
       );
     });
-    await new Promise((r) => setTimeout(r, 500));
+    await timeout(500);
     await vscode.commands.executeCommand(
       'workbench.action.toggleLightDarkThemes',
     );
-    await new Promise((r) => setTimeout(r, 500));
+    await timeout(500);
   }).timeout(10000);
 
   test('duplicate deactivate', async () => {
@@ -644,4 +636,8 @@ async function openTextDocument(): Promise<
       return Reflect.get(...args);
     },
   }) as vscode.TextDocument & AsyncDisposable;
+}
+
+function timeout(elapse: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, elapse));
 }
