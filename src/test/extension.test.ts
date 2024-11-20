@@ -182,20 +182,33 @@ suite('Extension Test Suite', () => {
           )
         : spec.text;
     const document = new MockTextDocument(text);
-    const [decoration, ...rest] = new SvgPreviewOnCode().svgPreviewDecorations(
-      document,
-    );
+    const e = new SvgPreviewOnCode();
+    Object.assign(e, {
+      id: 'sugoroku-y.svg-preview-on-code',
+      section: 'svg-preview-on-code',
+    });
+    const [decoration, ...rest] = e.svgPreviewDecorations(document);
     assert.equal(rest.length, 0);
     assert.ok(decoration);
-    assert.ok(decoration.hoverMessage instanceof vscode.MarkdownString);
-    assert.match(
-      decoration.hoverMessage.value,
-      /^### (.*)\n\n!\[\]\(data:(.*?);base64,([A-Za-z0-9+/]+=*)\)(?:\n\n\[\$\(gear\) (.*)\]\(command:workbench.action.openSettings\?\["@ext:sugoroku-y.svg-preview-on-code"\]\))?$/,
-    );
+    assert.ok(Array.isArray(decoration.hoverMessage));
+    const dataUrl = expect.previewTitle?.match(/^Data URL/);
+    assert.equal(decoration.hoverMessage.length, dataUrl ? 2 : 3);
+    assert.ok(decoration.hoverMessage[0] instanceof vscode.MarkdownString);
+    assert.match(decoration.hoverMessage[0].value, /^### (.*)$/);
     const previewTitle = RegExp.$1;
-    const contentType = RegExp.$2;
-    const decoded = atob(RegExp.$3);
-    const settingsCaption = RegExp.$4;
+    if (expect.previewTitle) {
+      assert.equal(previewTitle, expect.previewTitle);
+    }
+    assert.ok(decoration.hoverMessage[1] instanceof vscode.MarkdownString);
+    assert.match(
+      decoration.hoverMessage[1].value,
+      /^!\[\]\(data:(.*?);base64,([A-Za-z0-9+/]+=*)\)$/,
+    );
+    const contentType = RegExp.$1;
+    const decoded = atob(RegExp.$2);
+    if (expect.contentType) {
+      assert.equal(contentType, expect.contentType);
+    }
     if (contentType === 'image/svg+xml') {
       const parser = new XMLParser({
         preserveOrder: true,
@@ -222,19 +235,21 @@ suite('Extension Test Suite', () => {
           Object.keys(spec.preset ?? {}).length,
       );
     }
+    if (!dataUrl) {
+      assert.ok(decoration.hoverMessage[2] instanceof vscode.MarkdownString);
+      assert.match(
+        decoration.hoverMessage[2].value,
+        /^\[\$\(gear\) (.*)\]\(command:workbench.action.openSettings\?\["@ext:sugoroku-y.svg-preview-on-code"\]\)$/,
+      );
+      if (expect.settingsCaption) {
+        const settingsCaption = RegExp.$1;
+        assert.equal(settingsCaption, expect.settingsCaption);
+      }
+    }
     assert.equal(decoration.range.start.line, 0);
     assert.equal(decoration.range.start.character, 0);
     assert.equal(decoration.range.end.line, 0);
     assert.equal(decoration.range.end.character, text.length);
-    if (expect.previewTitle) {
-      assert.equal(previewTitle, expect.previewTitle);
-    }
-    if (expect.contentType) {
-      assert.equal(contentType, expect.contentType);
-    }
-    if (expect.settingsCaption) {
-      assert.equal(settingsCaption, expect.settingsCaption);
-    }
   }
 
   test('svg: currentColor: red', async () => {
@@ -387,18 +402,26 @@ suite('Extension Test Suite', () => {
     await new Promise((r) => setTimeout(r, 500));
     assert.equal(yields.length, 2);
     assert.equal(yields[1].length, 1);
+    const second = yields[1][0];
+    assert.ok(typeof second === 'object' && second);
+    assert.ok('range' in second && second.range instanceof vscode.Range);
+    assert.ok('hoverMessage' in second && Array.isArray(second.hoverMessage));
     assert.equal(
-      JSON.stringify(yields[1][0]),
-      '{"range":[{"line":0,"character":0},{"line":0,"character":46}],"hoverMessage":{}}',
+      JSON.stringify(second.range),
+      '[{"line":0,"character":0},{"line":0,"character":46}]',
     );
+    assert.equal(second.hoverMessage.length, 3);
+    assert.ok(second.hoverMessage[0] instanceof vscode.MarkdownString);
+    assert.equal(second.hoverMessage[0].value, '### SVG Preview');
+    assert.ok(second.hoverMessage[1] instanceof vscode.MarkdownString);
     assert.equal(
-      (yields[1][0] as { hoverMessage: vscode.MarkdownString }).hoverMessage
-        .value,
-      `### SVG Preview
-
-![](data:image/svg+xml;base64,PHN2ZyBjb2xvcj0iYmxhY2siIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIvPg==)
-
-[$(gear) Settings](command:workbench.action.openSettings?["@ext:sugoroku-y.svg-preview-on-code"])`,
+      second.hoverMessage[1].value,
+      '![](data:image/svg+xml;base64,PHN2ZyBjb2xvcj0iYmxhY2siIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIvPg==)',
+    );
+    assert.ok(second.hoverMessage[2] instanceof vscode.MarkdownString);
+    assert.equal(
+      second.hoverMessage[2].value,
+      '[$(gear) Settings](command:workbench.action.openSettings?["@ext:sugoroku-y.svg-preview-on-code"])',
     );
     await editor.edit((builder) => {
       builder.delete(
@@ -412,16 +435,21 @@ suite('Extension Test Suite', () => {
     await new Promise((r) => setTimeout(r, 500));
     assert.equal(yields.length, 3);
     assert.equal(yields[2].length, 1);
+    const third = yields[2][0];
+    assert.ok(typeof third === 'object' && third);
+    assert.ok('range' in third && third.range instanceof vscode.Range);
+    assert.ok('hoverMessage' in third && Array.isArray(third.hoverMessage));
     assert.equal(
-      JSON.stringify(yields[2][0]),
-      '{"range":[{"line":0,"character":0},{"line":0,"character":26}],"hoverMessage":{}}',
+      JSON.stringify(third.range),
+      '[{"line":0,"character":0},{"line":0,"character":26}]',
     );
+    assert.equal(third.hoverMessage.length, 2);
+    assert.ok(third.hoverMessage[0] instanceof vscode.MarkdownString);
+    assert.equal(third.hoverMessage[0].value, '### Data URL Preview');
+    assert.ok(third.hoverMessage[1] instanceof vscode.MarkdownString);
     assert.equal(
-      (yields[2][0] as { hoverMessage: vscode.MarkdownString }).hoverMessage
-        .value,
-      `### Data URL Preview
-
-![](data:image/png;base64,AAAA)`,
+      third.hoverMessage[1].value,
+      '![](data:image/png;base64,AAAA)',
     );
   }).timeout(10000);
 

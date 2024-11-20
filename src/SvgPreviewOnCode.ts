@@ -7,6 +7,8 @@ import {
 } from './SvgPresentationAttribute';
 
 export class SvgPreviewOnCode {
+  private id?: string;
+  private section?: string;
   private activated = false;
   private urlCache!: WeakMap<vscode.TextDocument, Map<string, string>>;
   private preset!: Partial<
@@ -38,6 +40,9 @@ export class SvgPreviewOnCode {
     if (this.activated) {
       throw new Error();
     }
+    this.id = context.extension.id;
+    this.section = this.id.match(/(?<=\.).*$/)?.[0];
+    this.reset();
     this.activated = true;
     context.subscriptions.push(
       ((instance) => ({
@@ -80,15 +85,18 @@ export class SvgPreviewOnCode {
       null,
       context.subscriptions,
     );
-    vscode.workspace.onDidChangeConfiguration(
-      (e) => {
-        if (e.affectsConfiguration('svg-preview-on-code')) {
-          this.updateVisibleEditors();
-        }
-      },
-      null,
-      context.subscriptions,
-    );
+    if (this.section) {
+      const { section } = this;
+      vscode.workspace.onDidChangeConfiguration(
+        (e) => {
+          if (e.affectsConfiguration(section)) {
+            this.updateVisibleEditors();
+          }
+        },
+        null,
+        context.subscriptions,
+      );
+    }
   }
 
   private deactivate() {
@@ -103,7 +111,7 @@ export class SvgPreviewOnCode {
   }
 
   private reset() {
-    const config = vscode.workspace.getConfiguration('svg-preview-on-code');
+    const config = vscode.workspace.getConfiguration(this.section);
     this.size = config.size as number;
     this.urlCache = new WeakMap<vscode.TextDocument, Map<string, string>>();
     this.preset = {
@@ -257,23 +265,22 @@ export class SvgPreviewOnCode {
         const end = document.positionAt(index + match.length);
         const range = new vscode.Range(start, end);
         // Markdown文字列として追加
-        const hoverMessage = new vscode.MarkdownString(
-          [
+        const hoverMessage = [
+          new vscode.MarkdownString(
             `### ${normalized ? 'SVG' : 'Data URL'} ${localeString('preview.preview')}`,
-            `![](${url})`,
-            ...(normalized
-              ? // 設定のリンクはsvgのときだけ
-                [
-                  `[$(gear) ${localeString('preview.settings')}](command:workbench.action.openSettings?["@ext:sugoroku-y.svg-preview-on-code"])`,
-                ]
-              : []),
-          ].join('\n\n'),
-          true,
-        );
+          ),
+          new vscode.MarkdownString(`![](${url})`),
+        ];
         if (normalized) {
-          hoverMessage.isTrusted = {
+          // 設定のリンクはsvgのときだけ
+          const link = new vscode.MarkdownString(
+            `[$(gear) ${localeString('preview.settings')}](command:workbench.action.openSettings?["@ext:${this.id}"])`,
+            true,
+          );
+          link.isTrusted = {
             enabledCommands: ['workbench.action.openSettings'],
           };
+          hoverMessage.push(link);
         }
         yield { range, hoverMessage };
       } catch (ex) {
