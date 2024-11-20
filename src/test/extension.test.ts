@@ -377,7 +377,7 @@ suite('Extension Test Suite', () => {
         }
       },
     );
-    const document = await vscode.workspace.openTextDocument();
+    await using document = await openTextDocument();
     const editor = await vscode.window.showTextDocument(document);
     assert.deepEqual(yields, [[]]);
     await new Promise((r) => setTimeout(r, 1000));
@@ -460,7 +460,7 @@ suite('Extension Test Suite', () => {
         }
       },
     );
-    const document = await vscode.workspace.openTextDocument();
+    await using document = await openTextDocument();
     const editor = await vscode.window.showTextDocument(document);
     assert.deepEqual(yields, [[]]);
     await editor.edit((builder) => {
@@ -489,7 +489,7 @@ suite('Extension Test Suite', () => {
     >;
     e.reset();
     assert.throws(() => e.activate({} as vscode.ExtensionContext));
-    const document = await vscode.workspace.openTextDocument();
+    await using document = await openTextDocument();
     const editor = await vscode.window.showTextDocument(document);
     await editor.edit((builder) => {
       builder.insert(document.positionAt(0), svg);
@@ -586,3 +586,33 @@ suite('Extension Test Suite', () => {
     e.deactivate();
   });
 });
+
+async function openTextDocument(): Promise<
+  vscode.TextDocument & AsyncDisposable
+> {
+  const document = await vscode.workspace.openTextDocument();
+  return new Proxy(document, {
+    get(...args) {
+      if (args[1] === Symbol.asyncDispose) {
+        return async function dispose(this: vscode.TextDocument) {
+          await vscode.window.tabGroups.close([
+            ...(function* (document) {
+              for (const { tabs } of vscode.window.tabGroups.all) {
+                for (const tab of tabs) {
+                  if (
+                    tab.input instanceof vscode.TabInputText &&
+                    String(tab.input.uri) === String(document.uri)
+                  ) {
+                    yield tab;
+                  }
+                }
+              }
+            })(this),
+          ]);
+        };
+      }
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+      return Reflect.get(...args);
+    },
+  }) as vscode.TextDocument & AsyncDisposable;
+}
