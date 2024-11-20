@@ -573,4 +573,16 @@ suite('Extension Test Suite', () => {
     );
     await new Promise((r) => setTimeout(r, 500));
   }).timeout(10000);
+
+  test('duplicate deactivate', async () => {
+    const extension = vscode.extensions.getExtension(
+      'sugoroku-y.svg-preview-on-code',
+    );
+    assert.ok(extension?.isActive);
+    const e = (await extension.activate()) as Accessiblize<
+      SvgPreviewOnCode,
+      'deactivate'
+    >;
+    e.deactivate();
+  });
 });
