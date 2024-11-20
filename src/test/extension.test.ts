@@ -180,7 +180,10 @@ suite('Extension Test Suite', () => {
           )
         : spec.text;
     const document = new MockTextDocument(text);
-    const e = new SvgPreviewOnCode();
+    const e = new SvgPreviewOnCode() as unknown as Accessiblize<
+      SvgPreviewOnCode,
+      'svgPreviewDecorations'
+    >;
     Object.assign(e, {
       id: 'sugoroku-y.svg-preview-on-code',
       section: 'svg-preview-on-code',
@@ -371,7 +374,7 @@ suite('Extension Test Suite', () => {
     assert.ok(extension?.isActive);
     const e = (await extension.activate()) as Accessiblize<
       SvgPreviewOnCode,
-      'reset'
+      'reset' | 'svgPreviewDecorations'
     >;
     e.reset();
     const yields: unknown[][] = [];
@@ -467,7 +470,7 @@ suite('Extension Test Suite', () => {
     assert.ok(extension?.isActive);
     const e = (await extension.activate()) as Accessiblize<
       SvgPreviewOnCode,
-      'reset'
+      'reset' | 'svgPreviewDecorations'
     >;
     e.reset();
     const yields: unknown[][] = [];

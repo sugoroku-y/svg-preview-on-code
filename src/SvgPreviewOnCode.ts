@@ -169,7 +169,7 @@ export class SvgPreviewOnCode {
 
   private static readonly IgnoreError = {} as Error;
 
-  *svgPreviewDecorations(
+  private *svgPreviewDecorations(
     document: vscode.TextDocument,
   ): Generator<vscode.DecorationOptions, void, undefined> {
     const previousMap = this.urlCache.get(document);
