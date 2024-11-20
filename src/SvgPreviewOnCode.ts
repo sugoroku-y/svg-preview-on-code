@@ -89,6 +89,7 @@ export class SvgPreviewOnCode {
       const { section } = this;
       vscode.workspace.onDidChangeConfiguration(
         (e) => {
+          /* c8 ignore next 3 affectsConfigurationが正しく機能しているかどうかはvscodeでテストされているはずなのでカバレッジ計測からは除外 */
           if (e.affectsConfiguration(section)) {
             this.updateVisibleEditors();
           }
@@ -289,6 +290,7 @@ export class SvgPreviewOnCode {
           nextMap.set(normalized, 'error');
           comingNew = true;
         }
+        /* c8 ignore next 4 IgnoreError以外の例外をテストで発生させられないのでカバレッジ計測からは除外 */
         if (ex !== SvgPreviewOnCode.IgnoreError) {
           // 無視するエラーでなくてもログに出すだけ
           console.error(ex);
