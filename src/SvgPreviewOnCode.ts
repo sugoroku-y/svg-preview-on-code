@@ -207,10 +207,6 @@ export class SvgPreviewOnCode {
               throw SvgPreviewOnCode.IgnoreError;
             }
           })();
-          if (!('svg' in svg[0])) {
-            // ルート要素がsvgではない
-            throw SvgPreviewOnCode.IgnoreError;
-          }
           if (!(':@' in svg[0])) {
             // ルート要素に属性がない(svgの名前空間指定があるはずなので属性が無ければ対象外)
             throw SvgPreviewOnCode.IgnoreError;
