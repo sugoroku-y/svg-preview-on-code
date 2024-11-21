@@ -2,6 +2,12 @@
 
 ## Release
 
+- `0.0.9`
+
+  - Add feature to enable/disable extensions on a language-by-language basis.
+
+  > - 拡張の有効無効を言語ごとに設定できる機能を追加
+
 - `0.0.8`
 
   - Icon image updated
