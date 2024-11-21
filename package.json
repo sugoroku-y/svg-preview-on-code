@@ -21,6 +21,12 @@
         "title": "SVG Preview on code",
         "markdownDescription": "Settings that control the behavior of the SVG Preview on code.",
         "properties": {
+          "svg-preview-on-code.disable": {
+            "type": "boolean",
+            "default": false,
+            "scope": "language-overridable",
+            "markdownDescription": "%configuration.description.disable%"
+          },
           "svg-preview-on-code.preset": {
             "type": [
               "object",

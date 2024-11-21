@@ -1,6 +1,7 @@
 {
   "preview.preview": "プレビュー",
   "preview.settings": "設定",
+  "configuration.description.disable": "この拡張を無効にするときにはONにします。",
   "configuration.description.currentColor": "svg内でcurrentColorが指定された箇所を描画する色を指定します。\n\n省略時にはダークモードでは黒、ライトモードでは白を使用します。",
   "configuration.description.size": "プレビューのサイズを指定します。\n\n省略時にはできるだけ元の画像のサイズで表示します。",
   "configuration.description.preset": "svg要素にデフォルトで設定される属性です。\n\nCSSなどにより属性に指定していなくても反映されるプロパティがあれば記述します。\n\nSVGのプレゼンテーション属性にあるものが指定できます。\n\n@see [SVGのプレゼンテーション属性](https://developer.mozilla.org/ja/docs/Web/SVG/Attribute#プレゼンテーション属性)\n\n\n```json\n\"svg-preview-on-code.preset\": {\n  \"fill\": \"none\",\n  \"stroke\": \"currentColor\",\n  \"stroke-width\": \"2\",\n  \"stroke-linecap\": \"round\",\n  \"stroke-linejoin\": \"round\",\n}\n```\n"

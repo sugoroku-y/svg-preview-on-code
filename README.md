@@ -33,6 +33,22 @@ This extension contributes the following settings:
 
 このエクステンションは以下の設定に対応しています。
 
+- `svg-preview-on-code.disable`:
+
+  Turn ON to disable this extension.
+
+   You can also enable or disable this extension on a language-by-language basis. For example, to disable it for HTML, set the following
+
+  この拡張を無効にするときにはONにします。
+
+  言語ごとにこの拡張の有効無効を切り替えることもできます。たとえばHTMLのときには無効にする場合は以下のように設定します。
+
+  ```json
+  "[html]": {
+    "svg-preview-on-code.disable": true
+  },
+  ```
+
 - `svg-preview-on-code.preset`:
 
   Attributes that are set by default for svg elements.

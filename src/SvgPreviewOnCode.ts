@@ -22,6 +22,7 @@ type TypedConfiguration<T extends object> = Readonly<Partial<T>> &
   > &
   vscode.WorkspaceConfiguration;
 type Configuration = TypedConfiguration<{
+  disable: boolean;
   preset: Record<string, string | number>;
   currentColor: string;
   size: number;
@@ -102,6 +103,18 @@ export class SvgPreviewOnCode {
     vscode.window.onDidChangeActiveColorTheme(
       () => {
         this.updateVisibleEditors();
+      },
+      null,
+      context.subscriptions,
+    );
+    // 言語の切り替えでも再設定
+    vscode.workspace.onDidOpenTextDocument(
+      (document) => {
+        // onDidOpenTextDocumentはドキュメントを開くときだけではなく言語(JavaScriptやCなど)が切り替えられるときにも呼び出される
+        // ドキュメントを開くときにはactiveTextEditor.documentは未設定のため、それがイベントのdocumentと一致するなら言語の切り替えと見なすことができる
+        if (vscode.window.activeTextEditor?.document === document) {
+          this.update(vscode.window.activeTextEditor);
+        }
       },
       null,
       context.subscriptions,
@@ -201,6 +214,9 @@ export class SvgPreviewOnCode {
   private *svgPreviewDecorations(
     document: vscode.TextDocument,
   ): Generator<vscode.DecorationOptions, void, undefined> {
+    if (this.getConfiguration(document).disable) {
+      return;
+    }
     const previousMap = this.urlCache.get(document);
     const nextMap = new Map<string, string>();
     let comingNew = false;

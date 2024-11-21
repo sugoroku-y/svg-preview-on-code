@@ -606,6 +606,50 @@ suite('Extension Test Suite', () => {
     >;
     e.deactivate();
   });
+
+  test('change language', async () => {
+    await using document = await openTextDocument();
+    const editor = await vscode.window.showTextDocument(document);
+    const config = vscode.workspace.getConfiguration('svg-preview-on-code', {
+      languageId: 'html',
+    });
+    await config.update(
+      'disable',
+      true,
+      vscode.ConfigurationTarget.Global,
+      true,
+    );
+    await using _ = {
+      async [Symbol.asyncDispose]() {
+        await config.update(
+          'disable',
+          undefined,
+          vscode.ConfigurationTarget.Global,
+          true,
+        );
+      },
+    };
+    vscode.commands.executeCommand(
+      'workbench.action.editor.changeLanguageMode',
+      'HTML',
+    );
+    await editor.edit((builder) => {
+      builder.insert(
+        document.positionAt(0),
+        /* html */ `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <path d="M2.5 8.8a10 10 0 1 0 9.5-6.8m0 10l-7.2-10-1 4m1-4h4" />
+        </svg>
+        `,
+      );
+    });
+    await timeout(500);
+    vscode.commands.executeCommand(
+      'workbench.action.editor.changeLanguageMode',
+      'JavaScript',
+    );
+    await timeout(500);
+  }).timeout(10000);
 });
 
 async function openTextDocument(): Promise<
