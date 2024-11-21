@@ -6,6 +6,27 @@ import {
   type SvgPresentationAttribute,
 } from './SvgPresentationAttribute';
 
+type UnionToIntersection<U> = (U extends U ? (a: U) => 0 : never) extends (
+  a: infer R,
+) => 0
+  ? R
+  : never;
+type TypedConfiguration<T extends object> = Readonly<Partial<T>> &
+  UnionToIntersection<
+    {
+      [K in keyof T]: {
+        get(section: K): T[K] | undefined;
+        get(section: K, defaultValue: T[K]): T[K];
+      };
+    }[keyof T]
+  > &
+  vscode.WorkspaceConfiguration;
+type Configuration = TypedConfiguration<{
+  preset: Record<string, string | number>;
+  currentColor: string;
+  size: number;
+}>;
+
 export class SvgPreviewOnCode {
   private id?: string;
   private section?: string;
@@ -111,14 +132,21 @@ export class SvgPreviewOnCode {
     this.decorationType.dispose();
   }
 
+  private getConfiguration(document?: vscode.TextDocument) {
+    return vscode.workspace.getConfiguration(
+      this.section,
+      document,
+    ) as Configuration;
+  }
+
   private reset() {
-    const config = vscode.workspace.getConfiguration(this.section);
-    this.size = config.size as number;
+    const config = this.getConfiguration();
+    this.size = config.size;
     this.urlCache = new WeakMap<vscode.TextDocument, Map<string, string>>();
     this.preset = {
       // currentColorに使用される色を指定する
       $$color:
-        (config.currentColor as string) ||
+        config.currentColor ||
         {
           [vscode.ColorThemeKind.Dark]: 'white',
           [vscode.ColorThemeKind.HighContrast]: 'white',
@@ -127,7 +155,7 @@ export class SvgPreviewOnCode {
         }[vscode.window.activeColorTheme.kind],
     };
     if (config.preset) {
-      for (const [name, value] of Object.entries(config.preset as object)) {
+      for (const [name, value] of Object.entries(config.preset)) {
         if (
           // SVGのプレゼンテーション属性のみ受け付ける
           isSvgPresentationAttribute(name) &&
