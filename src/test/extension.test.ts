@@ -492,11 +492,26 @@ suite('Extension Test Suite', () => {
   }).timeout(10000);
   test('change Theme', async () => {
     using _l = mock(vscode.env, 'language', 'en');
-    using _c = mock(
-      vscode.workspace,
-      'getConfiguration',
-      () => ({ size: 25 }) as unknown as vscode.WorkspaceConfiguration,
+    const config = vscode.workspace.getConfiguration();
+    await config.update(
+      'svg-preview-on-code',
+      undefined,
+      vscode.ConfigurationTarget.Global,
     );
+    await config.update(
+      'svg-preview-on-code.size',
+      25,
+      vscode.ConfigurationTarget.Global,
+    );
+    await using _ = {
+      async [Symbol.asyncDispose]() {
+        await config.update(
+          'svg-preview-on-code',
+          undefined,
+          vscode.ConfigurationTarget.Global,
+        );
+      },
+    };
     using _t = mock(vscode.window, 'activeColorTheme', {
       kind: vscode.ColorThemeKind.Light,
     });

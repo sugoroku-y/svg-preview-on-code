@@ -123,7 +123,6 @@ export class SvgPreviewOnCode {
       const { section } = this;
       vscode.workspace.onDidChangeConfiguration(
         (e) => {
-          /* c8 ignore next 3 affectsConfigurationが正しく機能しているかどうかはvscodeでテストされているはずなのでカバレッジ計測からは除外 */
           if (e.affectsConfiguration(section)) {
             this.updateVisibleEditors();
           }
