@@ -74,8 +74,10 @@ export class SvgPreviewOnCode {
       }))(this),
     );
 
+    // プレビューを設定
     this.update(vscode.window.activeTextEditor);
 
+    // ドキュメントを切り替え時に再設定
     vscode.window.onDidChangeActiveTextEditor(
       (editor) => {
         this.update(editor);
@@ -83,6 +85,7 @@ export class SvgPreviewOnCode {
       null,
       context.subscriptions,
     );
+    // ドキュメントの変更の場合は0.5秒後に再設定
     vscode.workspace.onDidChangeTextDocument(
       (ev) => {
         const editor = vscode.window.activeTextEditor;
@@ -100,6 +103,7 @@ export class SvgPreviewOnCode {
       null,
       context.subscriptions,
     );
+    // 配色テーマ切り替えで再設定
     vscode.window.onDidChangeActiveColorTheme(
       () => {
         this.updateVisibleEditors();
@@ -121,6 +125,7 @@ export class SvgPreviewOnCode {
     );
     if (this.section) {
       const { section } = this;
+      // 設定値の変更でも再設定
       vscode.workspace.onDidChangeConfiguration(
         (e) => {
           if (e.affectsConfiguration(section)) {
