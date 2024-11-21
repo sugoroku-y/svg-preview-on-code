@@ -394,7 +394,7 @@ suite('Extension Test Suite', () => {
       'sugoroku-y.svg-preview-on-code',
     );
     assert.ok(extension?.isActive);
-    const e = (await extension.activate()) as Accessiblize<
+    const e = extension.exports as Accessiblize<
       SvgPreviewOnCode,
       'reset' | 'svgPreviewDecorations'
     >;
@@ -475,7 +475,7 @@ suite('Extension Test Suite', () => {
       'sugoroku-y.svg-preview-on-code',
     );
     assert.ok(extension?.isActive);
-    const e = (await extension.activate()) as Accessiblize<
+    const e = extension.exports as Accessiblize<
       SvgPreviewOnCode,
       'reset' | 'svgPreviewDecorations'
     >;
@@ -519,10 +519,7 @@ suite('Extension Test Suite', () => {
       'sugoroku-y.svg-preview-on-code',
     );
     assert.ok(extension?.isActive);
-    const e = (await extension.activate()) as Accessiblize<
-      SvgPreviewOnCode,
-      'reset'
-    >;
+    const e = extension.exports as Accessiblize<SvgPreviewOnCode, 'reset'>;
     e.reset();
     assert.throws(() => e.activate({} as vscode.ExtensionContext));
     await using document = await openTextDocument();
@@ -615,10 +612,7 @@ suite('Extension Test Suite', () => {
       'sugoroku-y.svg-preview-on-code',
     );
     assert.ok(extension?.isActive);
-    const e = (await extension.activate()) as Accessiblize<
-      SvgPreviewOnCode,
-      'deactivate'
-    >;
+    const e = extension.exports as Accessiblize<SvgPreviewOnCode, 'deactivate'>;
     e.deactivate();
   });
 
