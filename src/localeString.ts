@@ -25,10 +25,11 @@ export function localeString(key: string): string {
             // package.nls.*.jsonが見つからないエラーは無視
             return;
           }
-          /* c8 ignore next 4 MODULE_NOT_FOUND以外の例外をテストで発生させられないのでカバレッジ計測からは除外 */
-          // その他のエラーはログを出して投げ直す
-          console.error(ex);
-          throw ex;
+          // その他のエラーもログを出すだけ
+          console.error(
+            `Error occurred in loading package.nls.${language}.json:`,
+            ex,
+          );
         }
       })(),
     };

@@ -5,6 +5,7 @@ import { createInterface } from 'readline';
 import { SvgPreviewOnCode } from '../SvgPreviewOnCode';
 import { resolve } from 'path';
 import { XMLParser } from 'fast-xml-parser';
+import { localeString } from '../localeString';
 
 type Accessiblize<T, K extends PropertyKey> = Omit<T, K> & {
   // @ts-expect-error privateメンバーにアクセスするために必要
@@ -694,4 +695,28 @@ suite('Extension Test Suite', () => {
     );
     await timeout(500);
   }).timeout(10000);
+});
+
+suite('nls', () => {
+  (
+    [
+      ['ja', { 'preview.preview': 'プレビュー', 'preview.settings': '設定' }],
+      ['en', { 'preview.preview': 'Preview', 'preview.settings': 'Settings' }],
+      [
+        'test-error',
+        { 'preview.preview': 'Preview', 'preview.settings': 'Settings' },
+      ],
+      [
+        'test-error2',
+        { 'preview.preview': 'Preview', 'preview.settings': 'Settings' },
+      ],
+    ] as const
+  ).forEach(([language, data]) => {
+    for (const [key, value] of Object.entries(data)) {
+      test(`locale string(${key}) for ${language}`, () => {
+        using _ = mock(vscode.env, 'language', language);
+        assert.equal(localeString(key), value);
+      });
+    }
+  });
 });

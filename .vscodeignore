@@ -15,3 +15,5 @@ images/*
 images/*/
 !images/*.png
 out/test/
+package.nls.test-error*
+package.nls.test-error*/
