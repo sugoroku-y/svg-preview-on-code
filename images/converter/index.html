@@ -1,16 +1,17 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
   <head>
-    <meta charset="utf-8"/>
+    <meta charset="utf-8" />
     <title>Converter</title>
     <script>
       window.addEventListener('load', () => {
-        const w = localStorage.getItem('width')
+        let currentFile;
+        const w = localStorage.getItem('width');
         if (w) {
           canvas.width = Number(w);
         }
         width.value = canvas.width;
-        const h = localStorage.getItem('height')
+        const h = localStorage.getItem('height');
         if (h) {
           canvas.height = Number(h);
         }
@@ -26,38 +27,81 @@
           reload();
         });
         file.addEventListener('change', () => {
+          if (!/\.svg$/i.test(file.files[0].name)) {
+            file.value = '';
+            return;
+          }
+          currentFile = file.files[0];
           reload();
-        })
+        });
         clear.addEventListener('click', () => {
-          file.value='';
+          file.value = '';
+          currentFile = undefined;
           reload();
-        })
+        });
+        document.addEventListener(
+          'dragover',
+          (ev) => {
+            ev.preventDefault();
+            ev.dataTransfer.dropEffect =
+              Array.from(ev.dataTransfer.items).find(
+                ({ kind }) => kind === 'file',
+              )?.type === 'image/svg+xml'
+                ? 'link'
+                : 'none';
+          },
+          false,
+        );
+        document.addEventListener(
+          'drop',
+          (ev) => {
+            ev.preventDefault();
+            for (let i = 0; i < ev.dataTransfer.items.length; ++i) {
+              const item = ev.dataTransfer.items[i];
+              if (item.kind !== 'file' || item.type !== 'image/svg+xml') {
+                continue;
+              }
+              currentFile = item.getAsFile();
+              reload(currentFile);
+              break;
+            }
+          },
+          false,
+        );
         async function reload() {
           const context = canvas.getContext('2d');
-          context.clearRect(0,0,canvas.width,canvas.height);
-          if (!file.files[0]) {
+          context.clearRect(0, 0, canvas.width, canvas.height);
+          if (!currentFile) {
             download.removeAttribute('href');
             download.removeAttribute('download');
             return;
           }
           const reader = new FileReader();
-          reader.readAsDataURL(file.files[0]);
-          await new Promise(resolve => {
-            reader.addEventListener('load', () => {
-              resolve();
-            },{once:true});
+          reader.readAsDataURL(currentFile);
+          await new Promise((resolve) => {
+            reader.addEventListener(
+              'load',
+              () => {
+                resolve();
+              },
+              { once: true },
+            );
           });
-          const url =reader.result;
+          const url = reader.result;
           const image = new Image();
           image.src = url;
-          await new Promise(resolve => {
-            image.addEventListener('load', () => {
-              resolve();
-            }, {once:true});
+          await new Promise((resolve) => {
+            image.addEventListener(
+              'load',
+              () => {
+                resolve();
+              },
+              { once: true },
+            );
           });
-          context.drawImage(image, 0, 0, canvas.width, canvas.height)
-          download.href=canvas.toDataURL();
-          download.download = `${file.files[0].name.match(/^.*(?=\.[^.]+$)/)?.[0] ?? 'image'}.png`;
+          context.drawImage(image, 0, 0, canvas.width, canvas.height);
+          download.href = canvas.toDataURL();
+          download.download = `${currentFile.name.match(/^.*(?=\.[^.]+$)/)?.[0] ?? 'image'}.png`;
         }
       });
     </script>
@@ -65,13 +109,20 @@
       #canvas {
         background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAANklEQVQ4T2N0cHD4z0AEaGhoIEIVAwPjqIE4w2k0DHEGzRBINgcOHKBuThk1kPKcMhqGgy8MAal4UAF1Mf8eAAAAAElFTkSuQmCC);
       }
+      div:has(> #canvas) {
+        float: left;
+        margin-right: 10px;
+      }
+      label:has(> input) {
+        white-space: nowrap;
+      }
     </style>
   </head>
-  <div><canvas id="canvas"/></div>
+  <div><canvas id="canvas" /></div>
   <div>
-    <label>width: <input type="number" id="width"/></label>
-    <label>height: <input type="number" id="height"/></label>
+    <label>width: <input type="number" id="width" /></label>
+    <label>height: <input type="number" id="height" /></label>
   </div>
-  <div><input type="file" id="file"/><button id="clear">clear</button></div>
+  <div><input type="file" id="file" /><button id="clear">clear</button></div>
   <a id="download">download</a>
 </html>
