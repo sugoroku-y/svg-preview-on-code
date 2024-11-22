@@ -224,16 +224,13 @@ export class SvgPreviewOnCode {
     const previousMap = this.urlCache.get(document);
     const nextMap = new Map<string, string>();
     let comingNew = false;
-    for (const { index, 0: match } of document
+    for (const { index, 0: match, 1: svg } of document
       .getText()
       .matchAll(
-        /<svg\s[^>]*>.*?<\/svg>|\bdata:image\/\w+(?:\+\w+)?;base64,(?=[A-Za-z0-9+/])(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}[A-Za-z0-9+/=]=)?(?![A-Za-z0-9+/=])/gs,
+        /(<svg\s[^>]*>.*?<\/svg>)|\bdata:image\/\w+(?:\+\w+)?;base64,(?=[A-Za-z0-9+/])(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}[A-Za-z0-9+/=]=)?(?![A-Za-z0-9+/=])/gs,
       )) {
-      const normalized = match.startsWith('data:')
-        ? // dataスキームはキャッシュ対象外
-          undefined
-        : // タグ前後の空白を除去したものをキャッシュのキーにする
-          match.replace(/(?<=>)\s+|\s+(?=<)/g, '');
+      // タグ前後の空白を除去したものをキャッシュのキーにする(dataスキームはキャッシュ対象外)
+      const normalized = svg?.replace(/(?<=>)\s+|\s+(?=<)/g, '');
       try {
         const url = (() => {
           // dataスキームはそのまま使用
@@ -332,7 +329,9 @@ export class SvgPreviewOnCode {
         if (normalized) {
           // 生成失敗したこともキャッシュする
           nextMap.set(normalized, 'error');
-          comingNew = true;
+          if (!previousMap?.has(normalized)) {
+            comingNew = true;
+          }
         }
         /* c8 ignore next 4 IgnoreError以外の例外をテストで発生させられないのでカバレッジ計測からは除外 */
         if (ex !== SvgPreviewOnCode.IgnoreError) {
