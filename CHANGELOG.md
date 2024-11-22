@@ -2,6 +2,12 @@
 
 ## Release
 
+- `0.1.0`
+
+  - Remove unnecessary files in the package
+
+  > - パッケージ内の不要なファイルを除去
+
 - `0.0.9`
 
   - Add feature to enable/disable extensions on a language-by-language basis.
