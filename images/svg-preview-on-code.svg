@@ -9,7 +9,7 @@
   </defs>
   <g transform="translate(0, 1)">
     <rect x="0.25" y="1" width="23.5" height="20" rx="1" fill="black" stroke="rgb(24 24 150)" stroke-width=".5"/>
-    <rect x="0" y="0.75" width="24" height="3" fill="gray" stroke="none"/>
+    <path d="M0 3.75v-2a1 1 0 0 1 1 -1h22a1 1 0 0 1 1 1v2z" fill="gray" stroke="none"/>
     <circle cx="1.5" cy="2.25" r="1" fill="red" stroke="none" />
     <circle cx="4" cy="2.25" r="1" fill="yellow" stroke="none" />
     <circle cx="6.5" cy="2.25" r="1" fill="lightgreen" stroke="none" />
