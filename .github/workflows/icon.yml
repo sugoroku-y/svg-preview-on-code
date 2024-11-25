@@ -1,0 +1,33 @@
+name: build icon
+on:
+  push:
+    paths:
+      - images/converter/index.cjs
+      - images/converter/index.html
+      - images/svg-preview-on-code.svg
+  workflow_dispatch:
+jobs:
+  build:
+    name: build icon from svg
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+      - run: npm ci
+      - name: Start xvfb
+        run: |
+          /usr/bin/Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+          echo ">>> Started xvfb"
+        shell: bash
+      - run: npm run buildIcon
+        env:
+          DISPLAY: ':99.0'
+      - name: Auto Commit
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: Update Icon
+          file_pattern: images/svg-preview-on-code.png
