@@ -1,9 +1,7 @@
 // @ts-check
-const { stat, readFile, rename, rm } = require('fs/promises');
-const { delimiter, join, resolve, dirname } = require('path');
-const { exec } = require('child_process');
-const { platform } = require('os');
-const { launch } = require('puppeteer-core');
+const { readFile, rename, rm } = require('fs/promises');
+const { join, resolve, dirname } = require('path');
+const { launch } = require('puppeteer');
 const yargs = require('yargs');
 
 const args = yargs
@@ -48,10 +46,8 @@ const args = yargs
     (() => {
       throw new Error('unreachable');
     })();
-  // Chromeのパスを検索
-  const executablePath = await getChromeExecutable();
   // puppeteerの準備
-  const browser = await launch({ executablePath, timeout: 600000 });
+  const browser = await launch({ timeout: 600000 });
   const page = await browser.newPage();
   await page.goto(
     // dataスキームURLでローカルのファイルを読み込む
@@ -92,8 +88,8 @@ const args = yargs
 
   /**
    *
-   * @param {import('puppeteer-core').Page} page
-   * @param {import('puppeteer-core').ElementHandle<HTMLAnchorElement>} download
+   * @param {import('puppeteer').Page} page
+   * @param {import('puppeteer').ElementHandle<HTMLAnchorElement>} download
    * @param {string} destination
    */
   async function downloadFile(page, download, destination) {
@@ -145,50 +141,5 @@ const args = yargs
     await rm(destination, { recursive: true, force: true });
     // 存在していない状態にできたらリネーム
     await rename(join(downloadPath, guid), destination);
-  }
-  /**
-   *
-   * @param {string} commandLine
-   * @returns {Promise<{stdout: string; stderr: string}>}
-   */
-  function execCommandLine(commandLine) {
-    return new Promise((resolve, reject) =>
-      exec(commandLine, (err, stdout, stderr) =>
-        err ? reject(err) : resolve({ stdout, stderr }),
-      ),
-    );
-  }
-  /**
-   *
-   * @param {unknown} ex
-   */
-  function ignoreNoEnt(ex) {
-    return typeof ex === 'object' && ex && 'code' in ex && ex.code === 'ENOENT'
-      ? undefined
-      : Promise.reject(ex);
-  }
-  async function isFile(path) {
-    return (await stat(path).catch(ignoreNoEnt))?.isFile() ?? false;
-  }
-
-  async function getChromeExecutable() {
-    if (platform() === 'win32') {
-      // WindowsではレジストリからChromeの場所を取得
-      const { stdout } = await execCommandLine(
-        // コンソールで扱う文字コードをUTF-8に変更してパスに非ASCII文字が含まれていても大丈夫なようにする
-        String.raw`chcp 65001 & reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe" /ve`,
-      );
-      return (/\sREG_SZ\s+(\S(?:.*\S)?)$/m.exec(stdout) ?? [])[1];
-    }
-    // 環境変数PAThからChromeを検索
-    for (const dir of process.env.PATH?.split(delimiter) ?? []) {
-      for (const ext of process.env.PATHEXT?.split(delimiter) ?? ['']) {
-        const fullpath = join(dir, `chrome${ext}`);
-        if (await isFile(fullpath)) {
-          return fullpath;
-        }
-      }
-    }
-    throw new Error('Chromeが見つかりません。');
   }
 })();
