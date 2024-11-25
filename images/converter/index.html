@@ -22,12 +22,18 @@
         const { canvas, width, height, file, clear, download } = this;
         /** @type {File | undefined | null} */
         let currentFile;
-        const w = localStorage.getItem('width');
+        const w =
+          location.protocol === 'file:'
+            ? localStorage.getItem('width')
+            : undefined;
         if (w) {
           canvas.width = Number(w);
         }
         width.valueAsNumber = canvas.width;
-        const h = localStorage.getItem('height');
+        const h =
+          location.protocol === 'file:'
+            ? localStorage.getItem('height')
+            : undefined;
         if (h) {
           canvas.height = Number(h);
         }
