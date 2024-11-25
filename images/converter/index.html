@@ -4,30 +4,46 @@
     <meta charset="utf-8" />
     <title>Converter</title>
     <script>
-      window.addEventListener('load', () => {
+      // @ts-check
+      (async function () {
+        await forLoading(window);
+        /**
+         * @typedef Elements
+         * @property {HTMLCanvasElement} canvas
+         * @property {HTMLInputElement} width
+         * @property {HTMLInputElement} height
+         * @property {HTMLInputElement} file
+         * @property {HTMLButtonElement} clear
+         * @property {HTMLAnchorElement} download
+         */
+        /**
+         * @type {Elements}
+         */
+        const { canvas, width, height, file, clear, download } = this;
+        /** @type {File | undefined | null} */
         let currentFile;
         const w = localStorage.getItem('width');
         if (w) {
           canvas.width = Number(w);
         }
-        width.value = canvas.width;
+        width.valueAsNumber = canvas.width;
         const h = localStorage.getItem('height');
         if (h) {
           canvas.height = Number(h);
         }
-        height.value = canvas.height;
+        height.valueAsNumber = canvas.height;
         width.addEventListener('change', () => {
-          canvas.width = Number(width.value);
+          canvas.width = width.valueAsNumber;
           localStorage.setItem('width', width.value);
           reload();
         });
         height.addEventListener('change', () => {
-          canvas.height = Number(height.value);
+          canvas.height = height.valueAsNumber;
           localStorage.setItem('height', height.value);
           reload();
         });
         file.addEventListener('change', () => {
-          if (!/\.svg$/i.test(file.files[0].name)) {
+          if (!file.files?.length || !/\.svg$/i.test(file.files[0].name)) {
             file.value = '';
             return;
           }
@@ -42,6 +58,9 @@
         document.addEventListener(
           'dragover',
           (ev) => {
+            if (!ev.dataTransfer) {
+              return;
+            }
             ev.preventDefault();
             ev.dataTransfer.dropEffect =
               Array.from(ev.dataTransfer.items).find(
@@ -55,6 +74,9 @@
         document.addEventListener(
           'drop',
           (ev) => {
+            if (!ev.dataTransfer) {
+              return;
+            }
             ev.preventDefault();
             for (let i = 0; i < ev.dataTransfer.items.length; ++i) {
               const item = ev.dataTransfer.items[i];
@@ -62,14 +84,32 @@
                 continue;
               }
               currentFile = item.getAsFile();
-              reload(currentFile);
+              reload();
               break;
             }
           },
           false,
         );
+        /**
+         * @param {EventTarget} target
+         * @returns {Promise<void>}
+         */
+        function forLoading(target) {
+          return new Promise((resolve) => {
+            target.addEventListener(
+              'load',
+              () => {
+                resolve();
+              },
+              { once: true },
+            );
+          });
+        }
         async function reload() {
           const context = canvas.getContext('2d');
+          if (!context) {
+            return;
+          }
           context.clearRect(0, 0, canvas.width, canvas.height);
           if (!currentFile) {
             download.removeAttribute('href');
@@ -78,32 +118,19 @@
           }
           const reader = new FileReader();
           reader.readAsDataURL(currentFile);
-          await new Promise((resolve) => {
-            reader.addEventListener(
-              'load',
-              () => {
-                resolve();
-              },
-              { once: true },
-            );
-          });
+          await forLoading(reader);
           const url = reader.result;
+          if (typeof url !== 'string') {
+            return;
+          }
           const image = new Image();
           image.src = url;
-          await new Promise((resolve) => {
-            image.addEventListener(
-              'load',
-              () => {
-                resolve();
-              },
-              { once: true },
-            );
-          });
+          await forLoading(image);
           context.drawImage(image, 0, 0, canvas.width, canvas.height);
           download.href = canvas.toDataURL();
-          download.download = `${currentFile.name.match(/^.*(?=\.[^.]+$)/)?.[0] ?? 'image'}.png`;
+          download.download = `${/[^/]+(?=\.svg$)/i.exec(currentFile.name)?.[0] ?? 'image'}.png`;
         }
-      });
+      })();
     </script>
     <style>
       #canvas {
