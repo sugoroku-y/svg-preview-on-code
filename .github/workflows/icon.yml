@@ -1,10 +1,5 @@
 name: build icon
 on:
-  push:
-    paths:
-      - images/converter/index.cjs
-      - images/converter/index.html
-      - images/svg-preview-on-code.svg
   workflow_dispatch:
 
 jobs:
