@@ -1,7 +1,5 @@
 name: build icon
-on:
-  workflow_dispatch:
-
+on: workflow_dispatch
 jobs:
   build:
     name: build icon from svg
