@@ -1,5 +1,11 @@
 name: build icon
-on: workflow_dispatch
+on:
+  push:
+    paths:
+      - images/converter/index.cjs
+      - images/converter/index.html
+      - images/svg-preview-on-code.svg
+  workflow_dispatch:
 jobs:
   build:
     name: build icon from svg
