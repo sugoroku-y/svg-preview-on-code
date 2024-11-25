@@ -3,7 +3,7 @@ const { stat, readFile, rename, rm } = require('fs/promises');
 const { delimiter, join, resolve, dirname } = require('path');
 const { exec } = require('child_process');
 const { platform } = require('os');
-const { launch } = require('puppeteer') || require('puppeteer-core');
+const { launch } = require('puppeteer-core');
 const yargs = require('yargs');
 
 const args = yargs
@@ -51,7 +51,7 @@ const args = yargs
   // Chromeのパスを検索
   const executablePath = await getChromeExecutable();
   // puppeteerの準備
-  const browser = await launch({ executablePath });
+  const browser = await launch({ executablePath, timeout: 600000 });
   const page = await browser.newPage();
   await page.goto(
     // dataスキームURLでローカルのファイルを読み込む
@@ -92,8 +92,8 @@ const args = yargs
 
   /**
    *
-   * @param {import('puppeteer').Page} page
-   * @param {import('puppeteer').ElementHandle<HTMLAnchorElement>} download
+   * @param {import('puppeteer-core').Page} page
+   * @param {import('puppeteer-core').ElementHandle<HTMLAnchorElement>} download
    * @param {string} destination
    */
   async function downloadFile(page, download, destination) {
