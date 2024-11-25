@@ -6,13 +6,7 @@ on:
       - images/converter/index.html
       - images/svg-preview-on-code.svg
   workflow_dispatch:
-    inputs:
-      size:
-        type: choice
-        options:
-          - 192x192
-          - 32x32
-          - 64x64
+
 jobs:
   build:
     name: build icon from svg
