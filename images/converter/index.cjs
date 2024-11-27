@@ -5,42 +5,50 @@ const { launch } = require('puppeteer');
 const yargs = require('yargs');
 
 /**
- * @param {keyof typeof LOCALE_MAP[keyof typeof LOCALE_MAP]} message
- * @param {Record<string, string>} params
- * @returns {string}
+ *
+ * @template {Record<string, Record<string, string>>} MAP
+ * @param {import('./LocaleMap').ValidationLocaleMaps<MAP>} map
+ * @param {string} locale
+ * @returns {import('./LocaleMap').Localizer<MAP>}
  */
-function localize(message, params = {}) {
-  const locale = yargs.locale();
-  const localeMap =
-    LOCALE_MAP[locale] ?? LOCALE_MAP[locale.match(/^(\w+)(?=_)/)?.[0] ?? ''];
-  return (localeMap?.[message] ?? message).replace(
-    /\$\$|\$\{(\w+)\}/g,
-    (_, key) => params[key] ?? '',
-  );
+function localizer(map, locale) {
+  localizer.locale = locale;
+  function localizer(message, params) {
+    const localeMap = map[localizer.locale];
+    const languageMap = map[localizer.locale.match(/^(\w+)(?=_)/)?.[0] ?? ''];
+    const localized = localeMap?.[message] ?? languageMap?.[message] ?? message;
+    return localized.replace(/\$(?:\$|\{([^${}]*)\})/g, (_, key) =>
+      key != null ? (params?.[key] ?? '') : '$',
+    );
+  }
+  return localizer;
 }
 
-const LOCALE_MAP = {
-  ja: {
-    'convert svg file to png file': 'SVGファイルをPNG画像に変換します',
-    'The source SVG file to be converted from.': '変換元のSVGファイル。',
-    'The destination PNG file to be converted to.\nIf omitted, use the filename with the extension of the source changed to png.':
-      '変換先のPNGファイル。\n省略時は変換元の拡張子をpngに変更したファイル名を使用します。',
-    'The size of the PNG image': 'PNG画像のサイズ',
-    'Invalid size(${size}): Please specify in WxH format':
-      '不正なサイズです(${size}): WxH形式で指定してください。',
-    'The source file is not SVG: ${source}':
-      '変換元ファイルがSVGではありません: ${source}',
-    'The destination file is not PNG: ${destination}':
-      '変換先ファイルがPNGではありません: ${destination}',
-    'loading HTML complete': 'HTMLの読み込みが完了しました',
-    'file selector not found': 'ファイル選択フィールドが見つかりません',
-    'loading svg file: ${source}': 'SVGファイルを読み込んでいます: ${source}',
-    'download link not found': 'ダウンロードリンクが見つかりません',
-    'converted svg file to: ${destination}':
-      'SVGファイルをPNGファイルに変換しました: ${destination}',
-    'download canceled': 'ダウンロード中止',
+const localize = localizer(
+  {
+    ja: {
+      'convert svg file to png file': 'SVGファイルをPNG画像に変換します',
+      'The source SVG file to be converted from.': '変換元のSVGファイル。',
+      'The destination PNG file to be converted to.\nIf omitted, use the filename with the extension of the source changed to png.':
+        '変換先のPNGファイル。\n省略時は変換元の拡張子をpngに変更したファイル名を使用します。',
+      'The size of the PNG image': 'PNG画像のサイズ',
+      'Invalid size(${size}): Please specify in WxH format':
+        '不正なサイズです(${size}): WxH形式で指定してください。',
+      'The source file is not SVG: ${source}':
+        '変換元ファイルがSVGではありません: ${source}',
+      'The destination file is not PNG: ${destination}':
+        '変換先ファイルがPNGではありません: ${destination}',
+      'loading HTML complete': 'HTMLの読み込みが完了しました',
+      'file selector not found': 'ファイル選択フィールドが見つかりません',
+      'loading svg file: ${source}': 'SVGファイルを読み込んでいます: ${source}',
+      'download link not found': 'ダウンロードリンクが見つかりません',
+      'converted svg file to: ${destination}':
+        'SVGファイルをPNGファイルに変換しました: ${destination}',
+      'download canceled': 'ダウンロード中止',
+    },
   },
-};
+  yargs.locale(),
+);
 
 const args = yargs
   .command(
