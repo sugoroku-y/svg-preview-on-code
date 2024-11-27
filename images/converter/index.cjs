@@ -12,16 +12,16 @@ const yargs = require('yargs');
  * @returns {import('./LocaleMap').Localizer<MAP>}
  */
 function localizer(map, locale) {
-  localizer.locale = locale;
-  function localizer(message, params) {
-    const localeMap = map[localizer.locale];
-    const languageMap = map[localizer.locale.match(/^(\w+)(?=_)/)?.[0] ?? ''];
+  localize.locale = locale;
+  function localize(message, params) {
+    const localeMap = map[localize.locale];
+    const languageMap = map[localize.locale.match(/^(\w+)(?=_)/)?.[0] ?? ''];
     const localized = localeMap?.[message] ?? languageMap?.[message] ?? message;
     return localized.replace(/\$(?:\$|\{([^${}]*)\})/g, (_, key) =>
       key != null ? (params?.[key] ?? '') : '$',
     );
   }
-  return localizer;
+  return localize;
 }
 
 const localize = localizer(
