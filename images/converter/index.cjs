@@ -1,4 +1,5 @@
 // @ts-check
+const { existsSync } = require('fs');
 const { readFile, rename, rm } = require('fs/promises');
 const { join, resolve, dirname } = require('path');
 const { launch } = require('puppeteer');
@@ -47,6 +48,8 @@ const localize = localizer({
     'converted svg file to: ${destination}':
       'SVGファイルをPNGファイルに変換しました: ${destination}',
     'download canceled': 'ダウンロード中止',
+    'The source file not found: ${source}':
+      '変換元ファイルが見つかりません: ${source}',
   },
 });
 localize.locale = yargs.locale();
@@ -96,6 +99,11 @@ const args = yargs
         localize('The destination file is not PNG: ${destination}', {
           destination,
         }),
+      );
+    }
+    if (!existsSync(resolve(source))) {
+      throw new Error(
+        localize('The source file not found: ${source}', { source }),
       );
     }
     return true;
