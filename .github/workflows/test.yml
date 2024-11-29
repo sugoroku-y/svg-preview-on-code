@@ -1,8 +1,12 @@
 name: TEST
 on:
   push:
+    branches-ignore:
+      - test*
     tags-ignore:
       - v*.*.*
+    paths-ignore:
+      - images/converter/
   pull_request:
 jobs:
   build:
