@@ -1,6 +1,6 @@
 // @ts-check
 const { existsSync } = require('fs');
-const { readFile, rename, rm } = require('fs/promises');
+const { readFile, rename, rm, mkdir } = require('fs/promises');
 const { join, resolve, dirname } = require('path');
 const { launch } = require('puppeteer');
 const yargs = require('yargs');
@@ -50,6 +50,8 @@ const localize = localizer({
     'download canceled': 'ダウンロード中止',
     'The source file not found: ${source}':
       '変換元ファイルが見つかりません: ${source}',
+    'Failed to create directory: ${directory}':
+      'ディレクトリの作成に失敗しました: ${directory}',
   },
 });
 localize.locale = yargs.locale();
@@ -172,6 +174,17 @@ const args = yargs
  */
 async function downloadFile(page, download, destination) {
   const downloadPath = dirname(destination);
+  try {
+    // ダウンロード先が存在していなければ作成する
+    await mkdir(downloadPath, { recursive: true });
+  } catch (ex) {
+    throw new Error(
+      localize('Failed to create directory: ${directory}', {
+        directory: downloadPath,
+      }),
+      { cause: ex },
+    );
+  }
   // ダウンロード先指定やダウンロード完了のイベントの準備
   const cdp = await page.createCDPSession();
   await cdp.send('Browser.setDownloadBehavior', {
