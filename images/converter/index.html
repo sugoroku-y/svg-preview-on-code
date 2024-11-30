@@ -12,16 +12,19 @@
          * @property {HTMLCanvasElement} canvas
          * @property {HTMLInputElement} width
          * @property {HTMLInputElement} height
-         * @property {HTMLInputElement} file
+         * @property {HTMLButtonElement} load
          * @property {HTMLButtonElement} clear
-         * @property {HTMLAnchorElement} download
+         * @property {HTMLButtonElement} save
          */
         /**
          * @type {Elements}
          */
-        const { canvas, width, height, file, clear, download } = this;
+        const { canvas, width, height, load, clear, save } = this;
         /** @type {File | undefined | null} */
         let currentFile;
+        /** @type {{href: string; download:string} | undefined | null} */
+        let anchorInfo;
+        save.disabled = false;
         const w =
           location.protocol === 'file:'
             ? localStorage.getItem('width')
@@ -48,18 +51,24 @@
           localStorage.setItem('height', height.value);
           reload();
         });
-        file.addEventListener('change', () => {
-          if (!file.files?.length || !/\.svg$/i.test(file.files[0].name)) {
-            file.value = '';
-            return;
-          }
-          currentFile = file.files[0];
-          reload();
+        load.addEventListener('click', () => {
+          (async () => {
+            currentFile = await showOpenFileDialog();
+            reload();
+          })();
         });
         clear.addEventListener('click', () => {
-          file.value = '';
           currentFile = undefined;
           reload();
+        });
+        save.addEventListener('click', () => {
+          if (!anchorInfo) {
+            return;
+          }
+          const anchor = document.createElement('a');
+          anchor.href = anchorInfo.href;
+          anchor.download = anchorInfo.download;
+          anchor.click();
         });
         document.addEventListener(
           'dragover',
@@ -117,9 +126,10 @@
             return;
           }
           context.clearRect(0, 0, canvas.width, canvas.height);
+          canvas.nextSibling?.remove();
           if (!currentFile) {
-            download.removeAttribute('href');
-            download.removeAttribute('download');
+            anchorInfo = undefined;
+            save.disabled = true;
             return;
           }
           const reader = new FileReader();
@@ -133,32 +143,52 @@
           image.src = url;
           await forLoading(image);
           context.drawImage(image, 0, 0, canvas.width, canvas.height);
-          download.href = canvas.toDataURL();
-          download.download = `${/[^/]+(?=\.svg$)/i.exec(currentFile.name)?.[0] ?? 'image'}.png`;
+          anchorInfo = {
+            href: canvas.toDataURL(),
+            download: `${/[^/]+(?=\.svg$)/i.exec(currentFile.name)?.[0] ?? 'image'}.png`,
+          };
+          canvas.after(currentFile.name);
+          save.disabled = false;
         }
+        function showOpenFileDialog() {
+          return new Promise((resolve) => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.svg, image/svg+xml';
+            input.addEventListener('change', () => resolve(input.files?.[0]));
+            input.click();
+          });
+        }
+        save.disabled = true;
       })();
     </script>
     <style>
       #canvas {
         background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAANklEQVQ4T2N0cHD4z0AEaGhoIEIVAwPjqIE4w2k0DHEGzRBINgcOHKBuThk1kPKcMhqGgy8MAal4UAF1Mf8eAAAAAElFTkSuQmCC);
       }
-      div:has(> #canvas) {
-        float: left;
-        margin-right: 10px;
+      body {
+        display: flex;
+        flex-flow: row;
+      }
+      div {
+        display: flex;
+        flex-flow: column;
+        align-items: flex-start;
+        margin-left: 10px;
       }
       label:has(> input) {
         white-space: nowrap;
       }
     </style>
   </head>
-  <div><canvas id="canvas" /></div>
+  <div>
+    <canvas id="canvas"></canvas>
+  </div>
   <div>
     <label>width: <input type="number" id="width" /></label>
     <label>height: <input type="number" id="height" /></label>
-  </div>
-  <div>
-    <input type="file" id="file" accept="=.svg,image/svg+xml" />
+    <button id="load">load</button>
     <button id="clear">clear</button>
+    <button id="save">save</button>
   </div>
-  <a id="download">download</a>
 </html>
