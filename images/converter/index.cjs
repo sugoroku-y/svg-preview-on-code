@@ -1,7 +1,7 @@
 // @ts-check
 const { existsSync } = require('fs');
-const { readFile, rename, rm, mkdir } = require('fs/promises');
-const { join, resolve, dirname } = require('path');
+const { readFile, mkdir, writeFile } = require('fs/promises');
+const { dirname } = require('path');
 const { launch } = require('puppeteer');
 const yargs = require('yargs');
 
@@ -41,17 +41,17 @@ const localize = localizer({
       '変換元ファイルがSVGではありません: ${source}',
     'The destination file is not PNG: ${destination}':
       '変換先ファイルがPNGではありません: ${destination}',
-    'loading HTML complete': 'HTMLの読み込みが完了しました',
-    'file selector not found': 'ファイル選択フィールドが見つかりません',
     'loading svg file: ${source}': 'SVGファイルを読み込んでいます: ${source}',
-    'download link not found': 'ダウンロードリンクが見つかりません',
-    'converted svg file to: ${destination}':
+    'converted svg file to png: ${destination}':
       'SVGファイルをPNGファイルに変換しました: ${destination}',
-    'download canceled': 'ダウンロード中止',
     'The source file not found: ${source}':
       '変換元ファイルが見つかりません: ${source}',
     'Failed to create directory: ${directory}':
       'ディレクトリの作成に失敗しました: ${directory}',
+    'Failed to load SVG file: ${source}':
+      'SVGファイルの読み込みに失敗しました: ${source}',
+    'Failed to write PNG file: ${destination}':
+      'PNGファイルの書き込みに失敗しました: ${destination}',
   },
 });
 localize.locale = yargs.locale();
@@ -103,7 +103,7 @@ const args = yargs
         }),
       );
     }
-    if (!existsSync(resolve(source))) {
+    if (!existsSync(source)) {
       throw new Error(
         localize('The source file not found: ${source}', { source }),
       );
@@ -113,6 +113,7 @@ const args = yargs
   .parseSync();
 
 (async () => {
+  console.log();
   const {
     source,
     destination = source.replace(/\.svg$/i, '.png'),
@@ -127,38 +128,63 @@ const args = yargs
   // puppeteerの準備
   const browser = await launch();
   const page = await browser.newPage();
-  await page.goto(
-    // dataスキームURLでローカルのファイルを読み込む
-    `data:text/html;base64,${(await readFile(join(__dirname, 'index.html'))).toString('base64')}`,
-  );
-  console.log(localize('loading HTML complete'));
-  // 画像サイズを指定($evalで一旦クリアしてからtypeで入力)
-  await page.$eval('input#width', (element) => {
-    element.value = '';
-  });
-  await page.type('input#width', width);
-  await page.$eval('input#height', (element) => {
-    element.value = '';
-  });
-  await page.type('input#height', height);
-  const file = await page.$('input#file');
-  if (!file) {
-    throw new Error(localize('file selector not found'));
-  }
-  // フォーカスを移動させないとサイズが反映されない
-  await file.focus();
-  console.log(`size: ${width}x${height}`);
-  // ファイルの選択
-  await file.uploadFile(resolve(source));
   console.log(localize('loading svg file: ${source}', { source }));
-  // 変換した画像をダウンロード
-  const download = await page.waitForSelector('a[href]#download');
-  if (!download) {
-    throw new Error(localize('download link not found'));
+  // SVGの読み込みとキャンバスのサイズ指定
+  await page.goto(
+    `data:text/html;base64,${Buffer.from(
+      /* html */ `
+      <html>
+        <body>
+          <img src="data:image/svg+xml;base64,${Buffer.from(
+            await readFile(source).catch((cause) => {
+              throw new Error(
+                localize('Failed to load SVG file: ${source}', { source }),
+                { cause },
+              );
+            }),
+          ).toString('base64')}"/>
+          <canvas width="${width}" height="${height}"></canvas>
+        </body>
+      </html>
+    `,
+    ).toString('base64')}`,
+  );
+  console.log(localize('convert svg file to png file'));
+  // svgをキャンバスに描画してPNGのDataURLに変換
+  const pngUrl = await page.$eval('canvas', (canvas) => {
+    const context = canvas.getContext('2d');
+    if (!context) {
+      return;
+    }
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    const [image] = document.getElementsByTagName('img');
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL();
+  });
+  assert(pngUrl);
+  const [data] =
+    /(?<=^data:image\/png;base64,)[A-Za-z0-9+/]+=*$/.exec(pngUrl) ?? [];
+  assert(data);
+  // DataURLからデコードしてファイルに保存
+  const directory = dirname(destination);
+  try {
+    await mkdir(directory, { recursive: true });
+  } catch (cause) {
+    throw new Error(
+      localize('Failed to create directory: ${directory}', { directory }),
+      { cause },
+    );
   }
-  await downloadFile(page, download, resolve(destination));
+  try {
+    await writeFile(destination, Buffer.from(data, 'base64'));
+  } catch (cause) {
+    throw new Error(
+      localize('Failed to write PNG file: ${destination}', { destination }),
+      { cause },
+    );
+  }
   console.log(
-    localize('converted svg file to: ${destination}', { destination }),
+    localize('converted svg file to png: ${destination}', { destination }),
   );
   // 後始末
   await page.close();
@@ -167,69 +193,11 @@ const args = yargs
 })();
 
 /**
- *
- * @param {import('puppeteer').Page} page
- * @param {import('puppeteer').ElementHandle<HTMLAnchorElement>} download
- * @param {string} destination
+ * @param {unknown} o
+ * @returns {asserts o}
  */
-async function downloadFile(page, download, destination) {
-  const downloadPath = dirname(destination);
-  try {
-    // ダウンロード先が存在していなければ作成する
-    await mkdir(downloadPath, { recursive: true });
-  } catch (ex) {
-    throw new Error(
-      localize('Failed to create directory: ${directory}', {
-        directory: downloadPath,
-      }),
-      { cause: ex },
-    );
+function assert(o) {
+  if (!o) {
+    throw new Error();
   }
-  // ダウンロード先指定やダウンロード完了のイベントの準備
-  const cdp = await page.createCDPSession();
-  await cdp.send('Browser.setDownloadBehavior', {
-    // allowAndNameを指定すると`${downloadPath}/${params.guid}`に保存される
-    behavior: 'allowAndName',
-    downloadPath,
-    // イベントBrowser.downloadProgressを発行する
-    eventsEnabled: true,
-  });
-  // ダウンロード
-  const [guid] = await Promise.all([downloading(cdp), download.click()]);
-  // 既に存在していれば削除
-  // - forceを指定しているので存在していなくてもエラーにならない
-  // - recursiveを指定しているので同名のフォルダが存在していても削除できる
-  // - 同名のファイル/フォルダが使用中の場合はエラー
-  await rm(destination, { recursive: true, force: true });
-  // 存在していない状態にできたらリネーム
-  await rename(join(downloadPath, guid), destination);
-}
-
-/**
- *
- * @param {import('puppeteer').CDPSession} cdp
- * @returns {Promise<string>}
- */
-function downloading(cdp) {
-  return new Promise((resolve, reject) => {
-    cdp.on('Browser.downloadProgress', (params) => {
-      switch (params.state) {
-        case 'completed':
-          // ダウンロード完了後のファイルをリネームするために必要なのでguidを返す
-          resolve(params.guid);
-          break;
-        case 'canceled':
-          reject(new Error(localize('download canceled')));
-          break;
-        case 'inProgress':
-          if (
-            params.totalBytes !== 0 &&
-            params.receivedBytes < params.totalBytes
-          ) {
-            console.log(`${params.receivedBytes}/${params.totalBytes}`);
-          }
-          break;
-      }
-    });
-  });
 }
