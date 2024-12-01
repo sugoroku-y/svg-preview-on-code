@@ -86,12 +86,15 @@ type LocalizeParameter<KEY extends string> = [TemplateParameters<KEY>] extends [
     [params: Record<TemplateParameters<KEY>, string>];
 
 /** メッセージをロケールに応じた文言に変換する関数の型 */
-export type LocalizeFunction<
-  MAPS extends Record<string, Record<string, string>>,
-> = {
+export type LocalizeFunction<MAPS extends Record<string, Record<string, string>>> = {
   <KEY extends string & keyof MAPS[keyof MAPS]>(
     key: KEY,
     ...args: LocalizeParameter<KEY>
   ): ParameterizedTemplate<KEY> | (string & {});
+  /** @deprecated MAPSに存在しないメッセージです。 */
+  <MESSAGE extends string>(
+    message: MESSAGE,
+    ...args: LocalizeParameter<MESSAGE>
+  ): MESSAGE;
   locale?: string;
 };

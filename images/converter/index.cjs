@@ -13,8 +13,15 @@ const yargs = require('yargs');
  * @returns {import('./LocaleMap').LocalizeFunction<MAP>}
  */
 function localizer(map, locale) {
-  /** @type {import('./LocaleMap').LocalizeFunction<MAP>} */
-  const localize = (message, ...[params]) => {
+  localize.locale = locale;
+  return localize;
+
+  /**
+   * @template {keyof MAP[keyof MAP] & string} KEY
+   * @param {KEY} message
+   * @param {import('./LocaleMap').LocalizeParameter<KEY>} _
+   */
+  function localize(message, ...[params]) {
     const locale = localize.locale ?? '';
     const language = locale.match(/^(\w+)(?=_)/)?.[0] ?? '';
     const localeMap = map[locale];
@@ -23,9 +30,7 @@ function localizer(map, locale) {
     return localized.replace(/\$(?:\$|\{([^${}]*)\})/g, (match, key) =>
       key ? (params?.[key] ?? '') : match === '$$' ? '$' : match,
     );
-  };
-  localize.locale = locale;
-  return localize;
+  }
 }
 
 const localize = localizer({
