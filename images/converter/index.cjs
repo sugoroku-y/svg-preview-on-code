@@ -30,28 +30,33 @@ function localizer(map, locale) {
 
 const localize = localizer({
   ja: {
-    'convert svg file to png file': 'SVGファイルをPNG画像に変換します',
+    'Convert the SVG file to a specified type of image file.':
+      'SVGファイルを指定されたタイプの画像ファイルに変換します。',
     'The source SVG file to be converted from.': '変換元のSVGファイル。',
-    'The destination PNG file to be converted to.\nIf omitted, use the filename with the extension of the source changed to png.':
-      '変換先のPNGファイル。\n省略時は変換元の拡張子をpngに変更したファイル名を使用します。',
-    'The size of the PNG image': 'PNG画像のサイズ',
+    'The destination image file to be converted to.\nIf omitted, use the filename of source with the extension changed according to the image type.':
+      '変換先の画像ファイル。\n省略時は拡張子を画像の種類に応じて変更したソースのファイル名を使用します。',
+    'The size of the image': '画像のサイズ',
+    'The type of the image': '画像の種類',
     'Invalid size(${size}): Please specify in WxH format':
       '不正なサイズです(${size}): WxH形式で指定してください。',
     'The source file is not SVG: ${source}':
       '変換元ファイルがSVGではありません: ${source}',
-    'The destination file is not PNG: ${destination}':
-      '変換先ファイルがPNGではありません: ${destination}',
-    'loading svg file: ${source}': 'SVGファイルを読み込んでいます: ${source}',
-    'converted svg file to png: ${destination}':
-      'SVGファイルをPNGファイルに変換しました: ${destination}',
+    'The destination file is not ${type}: ${destination}':
+      '変換先ファイルが${type}ではありません: ${destination}',
+    'loading the svg file: ${source}':
+      'SVGファイルを読み込んでいます: ${source}',
+    'converted the svg file to ${type}: ${destination}':
+      'SVGファイルを${type}ファイルに変換しました: ${destination}',
     'The source file not found: ${source}':
       '変換元ファイルが見つかりません: ${source}',
     'Failed to create directory: ${directory}':
       'ディレクトリの作成に失敗しました: ${directory}',
-    'Failed to load SVG file: ${source}':
+    'Failed to load the SVG file: ${source}':
       'SVGファイルの読み込みに失敗しました: ${source}',
-    'Failed to write PNG file: ${destination}':
-      'PNGファイルの書き込みに失敗しました: ${destination}',
+    'Failed to write the image file: ${destination}':
+      '画像ファイルの書き込みに失敗しました: ${destination}',
+    'Unsupported the image type: ${type}':
+      'サポートされていない画像の種類です: ${type}',
   },
 });
 localize.locale = yargs.locale();
@@ -59,7 +64,7 @@ localize.locale = yargs.locale();
 const args = yargs
   .command(
     '* <source> [<destination>]',
-    localize('convert svg file to png file'),
+    localize('Convert the SVG file to a specified type of image file.'),
   )
   .positional('source', {
     type: 'string',
@@ -69,21 +74,28 @@ const args = yargs
   .positional('destination', {
     type: 'string',
     describe: localize(
-      'The destination PNG file to be converted to.\nIf omitted, use the filename with the extension of the source changed to png.',
+      'The destination image file to be converted to.\nIf omitted, use the filename of source with the extension changed according to the image type.',
     ),
     demandOption: false,
   })
   .options({
     size: {
       type: 'string',
-      describe: localize('The size of the PNG image'),
+      describe: localize('The size of the image'),
       default: '192x192',
+      group: 'Images',
+    },
+    type: {
+      type: 'string',
+      describe: localize('The type of the image'),
+      default: 'png',
+      choices: ['webp', 'jpeg', 'png'],
       group: 'Images',
     },
   })
   .version(false)
   .strict()
-  .check(({ size, source, destination }) => {
+  .check(({ size, type, source, destination }) => {
     if (!/^\d+(?:x\d+)?$/.test(size)) {
       throw new Error(
         localize('Invalid size(${size}): Please specify in WxH format', {
@@ -96,10 +108,16 @@ const args = yargs
         localize('The source file is not SVG: ${source}', { source }),
       );
     }
-    if (destination && !/\.png$/i.test(destination)) {
+    if (
+      destination &&
+      !{ png: /\.png$/i, jpeg: /\.jpe?g$/i, webp: /\.webp$/i }[type].test(
+        destination,
+      )
+    ) {
       throw new Error(
-        localize('The destination file is not PNG: ${destination}', {
+        localize('The destination file is not ${type}: ${destination}', {
           destination,
+          type,
         }),
       );
     }
@@ -116,55 +134,64 @@ const args = yargs
   console.log();
   const {
     source,
-    destination = source.replace(/\.svg$/i, '.png'),
+    type,
+    destination = source.replace(
+      /\.svg$/i,
+      { png: '.png', webp: '.webp', jpeg: '.jpg' }[type],
+    ),
     size,
   } = args;
   const [, width, height = width] =
     /^(\d+)(?:x(\d+))?$/.exec(size) ??
-    (() => {
-      // 正規表現でのチェックはyargs内で行っているのでここには来ない
-      throw new Error('unreachable');
-    })();
+    // 正規表現でのチェックはyargs内で行っているのでここには来ない
+    error`unreachable`;
   // puppeteerの準備
   const browser = await launch();
   const page = await browser.newPage();
-  console.log(localize('loading svg file: ${source}', { source }));
+  console.log(localize('loading the svg file: ${source}', { source }));
   // SVGの読み込みとキャンバスのサイズ指定
   await page.goto(
-    `data:text/html;base64,${Buffer.from(
+    dataUrl(
+      'text/html',
       /* html */ `
       <html>
         <body>
-          <img src="data:image/svg+xml;base64,${Buffer.from(
+          <img src="${dataUrl(
+            'image/svg+xml',
             await readFile(source).catch((cause) => {
               throw new Error(
-                localize('Failed to load SVG file: ${source}', { source }),
+                localize('Failed to load the SVG file: ${source}', { source }),
                 { cause },
               );
             }),
-          ).toString('base64')}"/>
+          )}"/>
           <canvas width="${width}" height="${height}"></canvas>
         </body>
       </html>
     `,
-    ).toString('base64')}`,
+    ),
   );
-  console.log(localize('convert svg file to png file'));
-  // svgをキャンバスに描画してPNGのDataURLに変換
-  const pngUrl = await page.$eval('canvas', (canvas) => {
-    const context = canvas.getContext('2d');
-    if (!context) {
-      return;
-    }
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    const [image] = document.getElementsByTagName('img');
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL();
-  });
-  assert(pngUrl);
-  const [data] =
-    /(?<=^data:image\/png;base64,)[A-Za-z0-9+/]+=*$/.exec(pngUrl) ?? [];
-  assert(data);
+  console.log(
+    localize('Convert the SVG file to a specified type of image file.'),
+  );
+  // svgをキャンバスに描画してDataURLに変換
+  const pngUrl = await page.$eval(
+    'canvas',
+    (canvas, type) => {
+      const context = canvas.getContext('2d') ?? error`unreachable`;
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      const [image] = document.getElementsByTagName('img');
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL(`image/${type}`);
+    },
+    type,
+  );
+  const [, destinationType, data] =
+    /^data:image\/(png|webp|jpeg);base64,([A-Za-z0-9+/]+=*)$/.exec(pngUrl) ??
+    error`Unsupported url: ${pngUrl}`;
+  if (destinationType !== type) {
+    throw new Error(localize('Unsupported the image type: ${type}', { type }));
+  }
   // DataURLからデコードしてファイルに保存
   const directory = dirname(destination);
   try {
@@ -179,12 +206,17 @@ const args = yargs
     await writeFile(destination, Buffer.from(data, 'base64'));
   } catch (cause) {
     throw new Error(
-      localize('Failed to write PNG file: ${destination}', { destination }),
+      localize('Failed to write the image file: ${destination}', {
+        destination,
+      }),
       { cause },
     );
   }
   console.log(
-    localize('converted svg file to png: ${destination}', { destination }),
+    localize('converted the svg file to ${type}: ${destination}', {
+      destination,
+      type,
+    }),
   );
   // 後始末
   await page.close();
@@ -193,11 +225,18 @@ const args = yargs
 })();
 
 /**
- * @param {unknown} o
- * @returns {asserts o}
+ * @param {[TemplateStringsArray, ...unknown[]]} args
+ * @returns {never}
  */
-function assert(o) {
-  if (!o) {
-    throw new Error();
-  }
+function error(...args) {
+  throw new Error(args[0].reduce((r, e, i) => `${r}${args[i]}${e}`));
+}
+
+/**
+ * @param {string} type
+ * @param {string | Uint8Array} source
+ * @returns
+ */
+function dataUrl(type, source) {
+  return `data:${type};base64,${Buffer.from(source).toString('base64')}`;
 }
