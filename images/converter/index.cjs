@@ -1,4 +1,6 @@
 // @ts-check
+/** @import {LocalizeFunction, LocalizeParameter, ValidationLocaleMaps} from './LocaleMap' */
+
 const { existsSync } = require('fs');
 const { readFile, mkdir, writeFile } = require('fs/promises');
 const { dirname } = require('path');
@@ -8,9 +10,9 @@ const yargs = require('yargs');
 /**
  *
  * @template {Record<string, Record<string, string>>} MAP
- * @param {import('./LocaleMap').ValidationLocaleMaps<MAP>} map
+ * @param {ValidationLocaleMaps<MAP>} map
  * @param {string} [locale]
- * @returns {import('./LocaleMap').LocalizeFunction<MAP>}
+ * @returns {LocalizeFunction<MAP>}
  */
 function localizer(map, locale) {
   localize.locale = locale;
@@ -19,7 +21,7 @@ function localizer(map, locale) {
   /**
    * @template {keyof MAP[keyof MAP] & string} KEY
    * @param {KEY} message
-   * @param {import('./LocaleMap').LocalizeParameter<KEY>} _
+   * @param {LocalizeParameter<KEY>} _
    */
   function localize(message, ...[params]) {
     const locale = localize.locale ?? '';
