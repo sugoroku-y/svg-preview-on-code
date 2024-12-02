@@ -61,7 +61,7 @@
     "watch": "tsc -watch -p ./",
     "prelint": "npm run compile",
     "lint": "eslint src",
-    "buildIcon": "node images/converter/index.cjs images/svg-preview-on-code.svg",
+    "buildIcon": "node images/converter images/svg-preview-on-code.svg",
     "precoverage": "npm run lint",
     "coverage": "vscode-test --coverage --coverage-reporter text lcovonly clover",
     "pretest": "npm run lint",
