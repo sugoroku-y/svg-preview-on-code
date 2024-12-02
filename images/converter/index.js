@@ -9,17 +9,17 @@ const yargs = require('yargs');
 
 /**
  *
- * @template {Record<string, Record<string, string>>} MAP
- * @param {ValidationLocaleMaps<MAP>} map
+ * @template {Record<string, Record<string, string>>} MAPS
+ * @param {ValidationLocaleMaps<MAPS>} map
  * @param {string} [locale]
- * @returns {LocalizeFunction<MAP>}
+ * @returns {LocalizeFunction<MAPS>}
  */
 function localizer(map, locale) {
   localize.locale = locale;
   return localize;
 
   /**
-   * @template {keyof MAP[keyof MAP] & string} KEY
+   * @template {keyof MAPS[keyof MAPS] & string} KEY
    * @param {KEY} message
    * @param {LocalizeParameter<KEY>} _
    */
