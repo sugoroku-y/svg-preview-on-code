@@ -64,6 +64,7 @@ const localize = localizer({
       '画像ファイルの書き込みに失敗しました: ${destination}',
     'Unsupported the image type: ${type}':
       'サポートされていない画像の種類です: ${type}',
+    'Converting...': '変換中...',
   },
 });
 localize.locale = yargs.locale();
@@ -138,7 +139,9 @@ const args = yargs
   .parseSync();
 
 (async () => {
-  console.log();
+  console.log(
+    localize('Convert the SVG file to a specified type of image file.'),
+  );
   const {
     source,
     type,
@@ -178,9 +181,7 @@ const args = yargs
     `,
     ),
   );
-  console.log(
-    localize('Convert the SVG file to a specified type of image file.'),
-  );
+  console.log(localize('Converting...'));
   // svgをキャンバスに描画してDataURLに変換
   const pngUrl = await page.$eval(
     'canvas',
