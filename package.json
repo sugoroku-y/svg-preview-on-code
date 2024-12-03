@@ -57,6 +57,7 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
+    "precompile": "node tools/generateLocaleMapD.mjs",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "prelint": "npm run compile",

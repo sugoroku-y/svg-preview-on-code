@@ -1,21 +1,19 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import * as vscode from 'vscode';
+import type { LocaleMap, LocaleMapKey } from './LocaleMap';
 
-let cache: Record<string, string>;
+let cache: LocaleMap;
 let language: string;
 
-export function localeString(key: string): string {
+export function localeString(key: LocaleMapKey): string {
   if (language !== vscode.env.language) {
     language = vscode.env.language;
     cache = {
-      ...(require('../package.nls.json') as Record<string, string>),
+      ...(require('../package.nls.json') as LocaleMap),
       ...(() => {
         try {
           // 多言語対応していれば読み込み
-          return require(`../package.nls.${language}.json`) as Record<
-            string,
-            string
-          >;
+          return require(`../package.nls.${language}.json`) as LocaleMap;
         } catch (ex) {
           if (
             ex instanceof Error &&

@@ -6,6 +6,7 @@ import { SvgPreviewOnCode } from '../SvgPreviewOnCode';
 import { resolve } from 'path';
 import { XMLParser } from 'fast-xml-parser';
 import { localeString } from '../localeString';
+import type { LocaleMap, LocaleMapKey } from '../LocaleMap';
 
 type Accessiblize<T, K extends PropertyKey> = Omit<T, K> & {
   // @ts-expect-error privateメンバーにアクセスするために必要
@@ -710,9 +711,12 @@ suite('nls', () => {
         'test-error2',
         { 'preview.preview': 'Preview', 'preview.settings': 'Settings' },
       ],
-    ] as const
+    ] as const satisfies [string, Partial<LocaleMap>][]
   ).forEach(([language, data]) => {
-    for (const [key, value] of Object.entries(data)) {
+    for (const [key, value] of Object.entries(data) as [
+      LocaleMapKey,
+      string,
+    ][]) {
       test(`locale string(${key}) for ${language}`, () => {
         using _ = mock(vscode.env, 'language', language);
         assert.equal(localeString(key), value);
