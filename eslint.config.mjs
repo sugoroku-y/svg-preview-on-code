@@ -53,7 +53,7 @@ export default tseslint.config(
           checksVoidReturn: false,
         },
       ],
-      '@typescript-eslint/require-await': 'off',
+      '@typescript-eslint/require-await': 'error',
       '@typescript-eslint/await-thenable': 'error',
       '@typescript-eslint/no-floating-promises': [
         'error',
