@@ -2,6 +2,12 @@
 
 ## Release
 
+- `0.1.1`
+
+  - Fixed to preview even if the base64 part of Data URL is incomplete.
+
+  > - Data URLのbase64部分が不完全でもプレビューするように修正。
+
 - `0.1.0`
 
   - Remove unnecessary files in the package
