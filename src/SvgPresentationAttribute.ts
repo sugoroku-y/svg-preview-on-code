@@ -65,7 +65,13 @@ const SVG_PRESENTATION_ATTRIBUTES = {
   'word-spacing': true,
   'writing-mode': true,
 } as const;
+/** SVGのプレゼンテーション属性 */
 export type SvgPresentationAttribute = keyof typeof SVG_PRESENTATION_ATTRIBUTES;
+/**
+ * SVGのプレゼンテーション属性かどうかを判定する
+ * @param name 属性名
+ * @returns `name`がSVGのプレゼンテーション属性であれば真を返す。
+ */
 export function isSvgPresentationAttribute(
   name: string,
 ): name is SvgPresentationAttribute {

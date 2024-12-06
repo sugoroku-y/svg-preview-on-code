@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 import { XMLParser, XMLBuilder } from 'fast-xml-parser';
-import { localeString } from './localeString';
 import {
   isSvgPresentationAttribute,
   type SvgPresentationAttribute,
 } from './SvgPresentationAttribute';
+import { localeString } from './localeString';
 
 type UnionToIntersection<U> = (U extends U ? (a: U) => 0 : never) extends (
   a: infer R,

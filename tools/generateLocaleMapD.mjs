@@ -13,12 +13,14 @@ import { readFile, writeFile, readdir } from 'fs/promises';
 // このファイルは自動生成するので手動では編集せず
 // package.nls.jsonなどを編集したあと、
 // \`npm run precompile\`を実行すること
+/** ロケールごとの文言が用意されているメッセージのキー */
 export type LocaleMapKey =${Object.keys(localeMap)
     .map(
       (key) => `
   | '${key}'`,
     )
     .join('')};
+/** ロケールごとに用意するメッセージのキーと文言のマッピング */
 export type LocaleMap = Record<LocaleMapKey, string>;
 `.slice(1);
   await writeFile('src/LocaleMap.d.ts', content);

@@ -1,12 +1,13 @@
 import * as assert from 'assert';
-import * as vscode from 'vscode';
 import { createReadStream } from 'fs';
-import { createInterface } from 'readline';
-import { SvgPreviewOnCode } from '../SvgPreviewOnCode';
+import {} from 'os';
 import { resolve } from 'path';
+import { createInterface } from 'readline';
+import * as vscode from 'vscode';
 import { XMLParser } from 'fast-xml-parser';
-import { localeString } from '../localeString';
 import type { LocaleMap, LocaleMapKey } from '../LocaleMap';
+import { SvgPreviewOnCode } from '../SvgPreviewOnCode';
+import { localeString } from '../localeString';
 
 type Accessiblize<T, K extends PropertyKey> = Omit<T, K> & {
   // @ts-expect-error privateメンバーにアクセスするために必要
@@ -448,7 +449,7 @@ suite('Extension Test Suite', () => {
   });
 
   test('Changelog', async () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- Changelogの確認のためにpackage.jsonを読み込む必要がある
     const { version } = require('../../package.json') as { version: string };
     const stream = createInterface(
       createReadStream(resolve(__dirname, '..', '..', 'CHANGELOG.md')),
