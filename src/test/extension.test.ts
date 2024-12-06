@@ -649,7 +649,7 @@ suite('Extension Test Suite', () => {
     await timeout(500);
   }).timeout(10000);
 
-  test('duplicate deactivate', async () => {
+  test('duplicate deactivate', () => {
     getExtension<'deactivate'>().deactivate();
   });
 
