@@ -3,7 +3,7 @@
 
 const { existsSync } = require('fs');
 const { readFile, mkdir, writeFile } = require('fs/promises');
-const { dirname } = require('path');
+const { dirname, extname } = require('path');
 const { launch } = require('puppeteer');
 const yargs = require('yargs');
 
@@ -37,34 +37,36 @@ function localizer(map, locale) {
 
 const localize = localizer({
   ja: {
-    'Convert the SVG file to a specified type of image file.':
-      'SVGファイルを指定されたタイプの画像ファイルに変換します。',
-    'The source SVG file to be converted from.': '変換元のSVGファイル。',
+    'Convert the image file to a specified type of image file.':
+      '画像ファイルを指定されたタイプの画像ファイルに変換します。',
+    'The source image file to be converted from.': '変換元の画像ファイル。',
     'The destination image file to be converted to.\nIf omitted, use the filename of source with the extension changed according to the image type.':
       '変換先の画像ファイル。\n省略時は拡張子を画像の種類に応じて変更したソースのファイル名を使用します。',
     'The size of the image': '画像のサイズ',
     'The type of the image': '画像の種類',
     'Invalid size(${size}): Please specify in WxH format':
       '不正なサイズです(${size}): WxH形式で指定してください。',
-    'The source file is not SVG: ${source}':
-      '変換元ファイルがSVGではありません: ${source}',
+    'The source file is not supported image type: ${source}':
+      '変換元ファイルがサポートしている画像の種類ではありません: ${source}',
     'The destination file is not ${type}: ${destination}':
       '変換先ファイルが${type}ではありません: ${destination}',
-    'loading the svg file: ${source}':
-      'SVGファイルを読み込んでいます: ${source}',
-    'converted the svg file to ${type}: ${destination}':
-      'SVGファイルを${type}ファイルに変換しました: ${destination}',
+    'loading the image file: ${source}':
+      'imageファイルを読み込んでいます: ${source}',
+    'converted the ${sourceType} file to ${type}: ${destination}':
+      '${sourceType}ファイルを${type}ファイルに変換しました: ${destination}',
     'The source file not found: ${source}':
       '変換元ファイルが見つかりません: ${source}',
     'Failed to create directory: ${directory}':
       'ディレクトリの作成に失敗しました: ${directory}',
-    'Failed to load the SVG file: ${source}':
-      'SVGファイルの読み込みに失敗しました: ${source}',
+    'Failed to load the image file: ${source}':
+      '画像ファイルの読み込みに失敗しました: ${source}',
     'Failed to write the image file: ${destination}':
       '画像ファイルの書き込みに失敗しました: ${destination}',
     'Unsupported the image type: ${type}':
       'サポートされていない画像の種類です: ${type}',
     'Converting...': '変換中...',
+    'The source and destination files are identical. Please specify a different name for the files.: ${source}':
+      '変換元と変換先が同じです。別のファイル名を指定してください。: ${source}',
   },
 });
 localize.locale = yargs.locale();
@@ -72,11 +74,11 @@ localize.locale = yargs.locale();
 const args = yargs
   .command(
     '* <source> [<destination>]',
-    localize('Convert the SVG file to a specified type of image file.'),
+    localize('Convert the image file to a specified type of image file.'),
   )
   .positional('source', {
     type: 'string',
-    describe: localize('The source SVG file to be converted from.'),
+    describe: localize('The source image file to be converted from.'),
     demandOption: true,
   })
   .positional('destination', {
@@ -90,13 +92,11 @@ const args = yargs
     size: {
       type: 'string',
       describe: localize('The size of the image'),
-      default: '192x192',
       group: 'Images',
     },
     type: {
       type: 'string',
       describe: localize('The type of the image'),
-      default: 'png',
       choices: ['webp', 'jpeg', 'png'],
       group: 'Images',
     },
@@ -104,30 +104,40 @@ const args = yargs
   .version(false)
   .strict()
   .check(({ size, type, source, destination }) => {
-    if (!/^\d+(?:x\d+)?$/.test(size)) {
+    if (size && !/^\d+(?:x\d+)?$/.test(size)) {
       throw new Error(
         localize('Invalid size(${size}): Please specify in WxH format', {
           size,
         }),
       );
     }
-    if (!/\.svg$/i.test(source)) {
-      throw new Error(
-        localize('The source file is not SVG: ${source}', { source }),
-      );
-    }
     if (
-      destination &&
-      !{ png: /\.png$/i, jpeg: /\.jpe?g$/i, webp: /\.webp$/i }[type].test(
-        destination,
+      // chromeで扱える画像ファイルの拡張子でなければエラー
+      !/\.(?:xbm|tif|jfif|ico|tiff|gif|svgz?|p?jpe?g|webp|a?png|bmp|pjp|avif)$/i.test(
+        source,
       )
     ) {
       throw new Error(
-        localize('The destination file is not ${type}: ${destination}', {
-          destination,
-          type,
-        }),
+        localize('Unsupported the image type: ${type}', { type: source }),
       );
+    }
+    if (destination) {
+      const match = /\.(png|jpe?g|webp)$/i.exec(destination);
+      if (!match) {
+        throw new Error(
+          localize('Unsupported the image type: ${type}', {
+            type: destination,
+          }),
+        );
+      }
+      if (type && type.charAt(0) !== match[1].charAt(0).toLowerCase()) {
+        throw new Error(
+          localize('The destination file is not ${type}: ${destination}', {
+            destination,
+            type,
+          }),
+        );
+      }
     }
     if (!existsSync(source)) {
       throw new Error(
@@ -140,60 +150,93 @@ const args = yargs
 
 (async () => {
   console.log(
-    localize('Convert the SVG file to a specified type of image file.'),
+    localize('Convert the image file to a specified type of image file.'),
   );
-  const {
-    source,
-    type,
-    destination = source.replace(
-      /\.svg$/i,
+  const { source, type: _type, destination: _destination, size } = args;
+  const type =
+    _type ??
+    (_destination
+      ? // destinationが指定されていればその拡張子から種類を判別
+        /\.png$/i.test(_destination)
+        ? 'png'
+        : /\.jpe?g$/i.test(_destination)
+          ? 'jpeg'
+          : /\.webp$/i.test(_destination)
+            ? 'webp'
+            : // yargsのcheckでdestinationの拡張子をチェックしているのでここには来ない
+              error`unreachable`
+      : // destinationが指定されていなければPNG
+        'png');
+  const destination =
+    _destination ?? // destinationが指定されていなければsourceの拡張子をtypeにあわせて変更
+    source.replace(
+      /\.\w+$/i,
       { png: '.png', webp: '.webp', jpeg: '.jpg' }[type],
-    ),
-    size,
-  } = args;
+    );
+  if (destination === source) {
+    throw new Error(
+      localize(
+        'The source and destination files are identical. Please specify a different name for the files.: ${source}',
+        { source },
+      ),
+    );
+  }
   const [, width, height = width] =
-    /^(\d+)(?:x(\d+))?$/.exec(size) ??
-    // 正規表現でのチェックはyargs内で行っているのでここには来ない
-    error`unreachable`;
+    (size && /^(\d+)(?:x(\d+))?$/.exec(size)) || [];
   // puppeteerの準備
   const browser = await launch();
   const page = await browser.newPage();
-  console.log(localize('loading the svg file: ${source}', { source }));
-  // SVGの読み込みとキャンバスのサイズ指定
-  await page.goto(
-    dataUrl(
-      'text/html',
-      /* html */ `
-      <html>
-        <body>
-          <img src="${dataUrl(
-            'image/svg+xml',
-            await readFile(source).catch((cause) => {
-              throw new Error(
-                localize('Failed to load the SVG file: ${source}', { source }),
-                { cause },
-              );
-            }),
-          )}"/>
-          <canvas width="${width}" height="${height}"></canvas>
-        </body>
-      </html>
-    `,
-    ),
+  console.log(localize('loading the image file: ${source}', { source }));
+  const sourceType =
+    source.match(/(?<=\.)\w+$/i)?.[0].toLowerCase() ??
+    // sourceの拡張子チェックはyargsのcheckで行っているのでここには来ない
+    error`unreachable`;
+  const svgUrl = dataUrl(
+    `image/${{ svg: 'svg+xml', jpg: 'jpeg' }[sourceType] ?? sourceType}`,
+    await readFile(source).catch((cause) => {
+      throw new Error(
+        localize('Failed to load the image file: ${source}', { source }),
+        { cause },
+      );
+    }),
   );
+  // 空っぽのHTMLを表示
+  await page.goto(dataUrl('text/html', '<html><body></body></html>'));
   console.log(localize('Converting...'));
-  // svgをキャンバスに描画してDataURLに変換
-  const pngUrl = await page.$eval(
-    'canvas',
-    (canvas, type) => {
+  // 変換元画像をキャンバスに描画してDataURLに変換
+  const pngUrl = await page.evaluate(
+    async (svgUrl, width, height, type) => {
+      const image = new Image();
+      image.src = svgUrl;
+      try {
+        await new Promise(
+          /** @param {(v: void) => void} resolve */
+          (resolve, reject) => {
+            image.addEventListener('load', () => resolve());
+            image.addEventListener('error', () => reject(new Error()));
+          },
+        );
+      } catch {
+        return { error: 'loading' };
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width ? Number(width) : image.naturalWidth;
+      canvas.height = height ? Number(height) : image.naturalHeight;
       const context = canvas.getContext('2d') ?? error`unreachable`;
       context.clearRect(0, 0, canvas.width, canvas.height);
-      const [image] = document.getElementsByTagName('img');
       context.drawImage(image, 0, 0, canvas.width, canvas.height);
       return canvas.toDataURL(`image/${type}`);
     },
+    svgUrl,
+    width,
+    height,
     type,
   );
+  if (typeof pngUrl !== 'string') {
+    throw new Error(
+      localize('Failed to load the image file: ${source}', { source }),
+    );
+  }
   const [, destinationType, data] =
     /^data:image\/(png|webp|jpeg);base64,([A-Za-z0-9+/]+=*)$/.exec(pngUrl) ??
     error`Unsupported url: ${pngUrl}`;
@@ -221,9 +264,10 @@ const args = yargs
     );
   }
   console.log(
-    localize('converted the svg file to ${type}: ${destination}', {
+    localize('converted the ${sourceType} file to ${type}: ${destination}', {
       destination,
       type,
+      sourceType: extname(source).slice(1).toLowerCase(),
     }),
   );
   // 後始末

@@ -15,11 +15,12 @@
          * @property {HTMLButtonElement} load
          * @property {HTMLButtonElement} clear
          * @property {HTMLButtonElement} save
+         * @property {HTMLSelectElement} type
          */
         /**
          * @type {Elements}
          */
-        const { canvas, width, height, load, clear, save } = this;
+        const { canvas, width, height, load, clear, save, type } = this;
         /** @type {File | undefined | null} */
         let currentFile;
         /** @type {{href: string; download:string} | undefined | null} */
@@ -51,15 +52,19 @@
           localStorage.setItem('height', height.value);
           reload();
         });
+        type.addEventListener('change', () => {
+          if (!anchorInfo) {
+            return;
+          }
+          updateAnchorInfo(anchorInfo.download);
+        });
         load.addEventListener('click', () => {
           (async () => {
-            currentFile = await showOpenFileDialog();
-            reload();
+            setFile(await showOpenFileDialog('image/*'));
           })();
         });
         clear.addEventListener('click', () => {
-          currentFile = undefined;
-          reload();
+          setFile(undefined);
         });
         save.addEventListener('click', () => {
           if (!anchorInfo) {
@@ -77,12 +82,13 @@
               return;
             }
             ev.preventDefault();
-            ev.dataTransfer.dropEffect =
+            ev.dataTransfer.dropEffect = /^image\//.test(
               Array.from(ev.dataTransfer.items).find(
                 ({ kind }) => kind === 'file',
-              )?.type === 'image/svg+xml'
-                ? 'link'
-                : 'none';
+              )?.type ?? '',
+            )
+              ? 'link'
+              : 'none';
           },
           false,
         );
@@ -95,41 +101,46 @@
             ev.preventDefault();
             for (let i = 0; i < ev.dataTransfer.items.length; ++i) {
               const item = ev.dataTransfer.items[i];
-              if (item.kind !== 'file' || item.type !== 'image/svg+xml') {
+              if (item.kind !== 'file' || !/^image\//.test(item.type)) {
                 continue;
               }
-              currentFile = item.getAsFile();
-              reload();
+              setFile(item.getAsFile());
               break;
             }
           },
           false,
         );
+
         /**
          * @param {EventTarget} target
          * @returns {Promise<void>}
          */
         function forLoading(target) {
-          return new Promise((resolve) => {
-            target.addEventListener(
-              'load',
-              () => {
-                resolve();
-              },
-              { once: true },
-            );
+          return new Promise((resolve, reject) => {
+            target.addEventListener('load', () => resolve(), { once: true });
+            target.addEventListener('error', () => reject(new Error()), {
+              once: true,
+            });
           });
         }
+        /**
+         * @param {File | null | undefined} file
+         */
+        async function setFile(file) {
+          currentFile = file;
+          await reload();
+        }
         async function reload() {
+          while (canvas.nextSibling) {
+            canvas.nextSibling.remove();
+          }
+          save.disabled = true;
           const context = canvas.getContext('2d');
           if (!context) {
             return;
           }
           context.clearRect(0, 0, canvas.width, canvas.height);
-          canvas.nextSibling?.remove();
           if (!currentFile) {
-            anchorInfo = undefined;
-            save.disabled = true;
             return;
           }
           const reader = new FileReader();
@@ -141,25 +152,43 @@
           }
           const image = new Image();
           image.src = url;
-          await forLoading(image);
+          try {
+            await forLoading(image);
+          } catch {
+            const span = document.createElement('span');
+            span.append(currentFile.name);
+            span.classList.add('error');
+            canvas.after(span);
+            currentFile = undefined;
+            return;
+          }
           context.drawImage(image, 0, 0, canvas.width, canvas.height);
-          anchorInfo = {
-            href: canvas.toDataURL(),
-            download: `${/[^/]+(?=\.svg$)/i.exec(currentFile.name)?.[0] ?? 'image'}.png`,
-          };
           canvas.after(currentFile.name);
+          updateAnchorInfo(currentFile.name);
           save.disabled = false;
         }
-        function showOpenFileDialog() {
+        /**
+         * @param {string} filename
+         */
+        function updateAnchorInfo(filename) {
+          anchorInfo = {
+            href: canvas.toDataURL(`image/${type.value}`),
+            download: `${/[^/]+(?=\.\w+$)/i.exec(filename)?.[0] ?? 'image'}.${type.value}`,
+          };
+        }
+        /**
+         * @param {`${'image' | 'audio' | 'video'}/*`} type
+         * @returns {Promise<File | undefined>}
+         */
+        function showOpenFileDialog(type) {
           return new Promise((resolve) => {
             const input = document.createElement('input');
             input.type = 'file';
-            input.accept = '.svg, image/svg+xml';
+            input.accept = type;
             input.addEventListener('change', () => resolve(input.files?.[0]));
             input.click();
           });
         }
-        save.disabled = true;
       })();
     </script>
     <style>
@@ -179,6 +208,9 @@
       label:has(> input) {
         white-space: nowrap;
       }
+      .error {
+        color: red;
+      }
     </style>
   </head>
   <div>
@@ -187,8 +219,16 @@
   <div>
     <label>width: <input type="number" id="width" /></label>
     <label>height: <input type="number" id="height" /></label>
+    <label
+      >type:
+      <select id="type">
+        <option value="png" selected>PNG</option>
+        <option value="jpeg">JPEG</option>
+        <option value="webp">WEBP</option>
+      </select>
+    </label>
     <button id="load">load</button>
     <button id="clear">clear</button>
-    <button id="save">save</button>
+    <button id="save" disabled>save</button>
   </div>
 </html>
