@@ -1,4 +1,15 @@
-import * as vscode from 'vscode';
+import {
+  type DecorationOptions,
+  type ExtensionContext,
+  type TextDocument,
+  type TextEditor,
+  ColorThemeKind,
+  MarkdownString,
+  Range,
+  WorkspaceConfiguration,
+  window,
+  workspace,
+} from 'vscode';
 import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 import {
   isSvgPresentationAttribute,
@@ -20,7 +31,7 @@ type TypedConfiguration<T extends object> = Readonly<Partial<T>> &
       };
     }[keyof T]
   > &
-  vscode.WorkspaceConfiguration;
+  WorkspaceConfiguration;
 type Configuration = TypedConfiguration<{
   disable: boolean;
   preset: Record<string, string | number>;
@@ -32,7 +43,7 @@ export class SvgPreviewOnCode {
   private id?: string;
   private section?: string;
   private activated = false;
-  private urlCache!: WeakMap<vscode.TextDocument, Map<string, string>>;
+  private urlCache!: WeakMap<TextDocument, Map<string, string>>;
   private preset!: Partial<
     Record<`$$${SvgPresentationAttribute}`, string | number>
   >;
@@ -51,14 +62,13 @@ export class SvgPreviewOnCode {
     ignoreAttributes: false,
     attributeNamePrefix: '$$',
   });
-  private readonly decorationType =
-    vscode.window.createTextEditorDecorationType({});
+  private readonly decorationType = window.createTextEditorDecorationType({});
 
   constructor() {
     this.reset();
   }
 
-  activate(context: vscode.ExtensionContext) {
+  activate(context: ExtensionContext) {
     if (this.activated) {
       throw new Error();
     }
@@ -75,10 +85,10 @@ export class SvgPreviewOnCode {
     );
 
     // プレビューを設定
-    this.update(vscode.window.activeTextEditor);
+    this.update(window.activeTextEditor);
 
     // ドキュメントを切り替え時に再設定
-    vscode.window.onDidChangeActiveTextEditor(
+    window.onDidChangeActiveTextEditor(
       (editor) => {
         this.update(editor);
       },
@@ -86,9 +96,9 @@ export class SvgPreviewOnCode {
       context.subscriptions,
     );
     // ドキュメントの変更の場合は0.5秒後に再設定
-    vscode.workspace.onDidChangeTextDocument(
+    workspace.onDidChangeTextDocument(
       (ev) => {
-        const editor = vscode.window.activeTextEditor;
+        const editor = window.activeTextEditor;
         if (!editor) {
           return;
         }
@@ -104,7 +114,7 @@ export class SvgPreviewOnCode {
       context.subscriptions,
     );
     // 配色テーマ切り替えで再設定
-    vscode.window.onDidChangeActiveColorTheme(
+    window.onDidChangeActiveColorTheme(
       () => {
         this.updateVisibleEditors();
       },
@@ -112,12 +122,12 @@ export class SvgPreviewOnCode {
       context.subscriptions,
     );
     // 言語の切り替えでも再設定
-    vscode.workspace.onDidOpenTextDocument(
+    workspace.onDidOpenTextDocument(
       (document) => {
         // onDidOpenTextDocumentはドキュメントを開くときだけではなく言語(JavaScriptやCなど)が切り替えられるときにも呼び出される
         // ドキュメントを開くときにはactiveTextEditor.documentは未設定のため、それがイベントのdocumentと一致するなら言語の切り替えと見なすことができる
-        if (vscode.window.activeTextEditor?.document === document) {
-          this.update(vscode.window.activeTextEditor);
+        if (window.activeTextEditor?.document === document) {
+          this.update(window.activeTextEditor);
         }
       },
       null,
@@ -126,7 +136,7 @@ export class SvgPreviewOnCode {
     if (this.section) {
       const { section } = this;
       // 設定値の変更でも再設定
-      vscode.workspace.onDidChangeConfiguration(
+      workspace.onDidChangeConfiguration(
         (e) => {
           if (e.affectsConfiguration(section)) {
             this.updateVisibleEditors();
@@ -143,36 +153,33 @@ export class SvgPreviewOnCode {
       return;
     }
     this.activated = false;
-    for (const document of vscode.workspace.textDocuments) {
+    for (const document of workspace.textDocuments) {
       this.urlCache.delete(document);
     }
     this.decorationType.dispose();
   }
 
-  private getConfiguration(document?: vscode.TextDocument) {
-    return vscode.workspace.getConfiguration(
-      this.section,
-      document,
-    ) as Configuration;
+  private getConfiguration(document?: TextDocument) {
+    return workspace.getConfiguration(this.section, document) as Configuration;
   }
 
   private reset() {
-    const config = this.getConfiguration();
-    this.size = config.size;
-    this.urlCache = new WeakMap<vscode.TextDocument, Map<string, string>>();
+    const { size, preset, currentColor } = this.getConfiguration();
+    this.size = size;
+    this.urlCache = new WeakMap<TextDocument, Map<string, string>>();
     this.preset = {
       // currentColorに使用される色を指定する
       $$color:
-        config.currentColor ||
+        currentColor ||
         {
-          [vscode.ColorThemeKind.Dark]: 'white',
-          [vscode.ColorThemeKind.HighContrast]: 'white',
-          [vscode.ColorThemeKind.Light]: 'black',
-          [vscode.ColorThemeKind.HighContrastLight]: 'black',
-        }[vscode.window.activeColorTheme.kind],
+          [ColorThemeKind.Dark]: 'white',
+          [ColorThemeKind.HighContrast]: 'white',
+          [ColorThemeKind.Light]: 'black',
+          [ColorThemeKind.HighContrastLight]: 'black',
+        }[window.activeColorTheme.kind],
     };
-    if (config.preset) {
-      for (const [name, value] of Object.entries(config.preset)) {
+    if (preset) {
+      for (const [name, value] of Object.entries(preset)) {
         if (
           // SVGのプレゼンテーション属性のみ受け付ける
           isSvgPresentationAttribute(name) &&
@@ -193,7 +200,7 @@ export class SvgPreviewOnCode {
     }
   }
 
-  private update(editor: vscode.TextEditor | undefined) {
+  private update(editor: TextEditor | undefined) {
     this.clearTimeout();
     if (!editor) {
       return;
@@ -205,7 +212,7 @@ export class SvgPreviewOnCode {
   private updateVisibleEditors() {
     const oldCache = this.urlCache;
     this.reset();
-    for (const editor of vscode.window.visibleTextEditors) {
+    for (const editor of window.visibleTextEditors) {
       if (!oldCache.has(editor.document)) {
         continue;
       }
@@ -216,8 +223,8 @@ export class SvgPreviewOnCode {
   private static readonly IgnoreError = {} as Error;
 
   private *svgPreviewDecorations(
-    document: vscode.TextDocument,
-  ): Generator<vscode.DecorationOptions, void, undefined> {
+    document: TextDocument,
+  ): Generator<DecorationOptions, void, undefined> {
     if (this.getConfiguration(document).disable) {
       return;
     }
@@ -305,17 +312,17 @@ export class SvgPreviewOnCode {
         // svgもしくはDataスキームURIの範囲にプレビューを追加
         const start = document.positionAt(index);
         const end = document.positionAt(index + match.length);
-        const range = new vscode.Range(start, end);
+        const range = new Range(start, end);
         // Markdown文字列として追加
         const hoverMessage = [
-          new vscode.MarkdownString(
+          new MarkdownString(
             `### ${normalized ? 'SVG' : 'Data URL'} ${localeString('preview.preview')}`,
           ),
-          new vscode.MarkdownString(`![](${url})`),
+          new MarkdownString(`![](${url})`),
         ];
         if (normalized) {
           // 設定のリンクはsvgのときだけ
-          const link = new vscode.MarkdownString(
+          const link = new MarkdownString(
             `[$(gear) ${localeString('preview.settings')}](command:workbench.action.openSettings?["@ext:${this.id}"])`,
             true,
           );

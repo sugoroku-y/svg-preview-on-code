@@ -1,5 +1,5 @@
+import { env } from 'vscode';
 /* eslint-disable @typescript-eslint/no-require-imports -- package.nls.jsonの読み込みに必要 */
-import * as vscode from 'vscode';
 import type { LocaleMap, LocaleMapKey } from './LocaleMap';
 
 let cache: LocaleMap;
@@ -9,8 +9,8 @@ let language: string;
  * 現在選択されているロケールに応じたメッセージを返す。
  */
 export function localeString(key: LocaleMapKey): string {
-  if (language !== vscode.env.language) {
-    language = vscode.env.language;
+  if (language !== env.language) {
+    language = env.language;
     cache = {
       ...(require('../package.nls.json') as LocaleMap),
       ...(() => {

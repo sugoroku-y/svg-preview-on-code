@@ -1,10 +1,10 @@
-import * as vscode from 'vscode';
+import { type ExtensionContext } from 'vscode';
 import { SvgPreviewOnCode } from './SvgPreviewOnCode';
 
 /**
  * VSCode拡張のエントリポイント
  */
-export function activate(context: vscode.ExtensionContext) {
+export function activate(context: ExtensionContext) {
   const extension = new SvgPreviewOnCode();
   extension.activate(context);
   return extension;

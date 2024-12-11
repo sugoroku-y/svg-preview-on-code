@@ -1,9 +1,25 @@
 import * as assert from 'assert';
 import { createReadStream } from 'fs';
-import {} from 'os';
 import { resolve } from 'path';
 import { createInterface } from 'readline';
-import * as vscode from 'vscode';
+import {
+  type ColorTheme,
+  type DecorationOptions,
+  type ExtensionContext,
+  type Tab,
+  type TextDocument,
+  type TextEditor,
+  ConfigurationTarget,
+  ColorThemeKind,
+  MarkdownString,
+  Range,
+  TabInputText,
+  commands,
+  env,
+  extensions,
+  window,
+  workspace,
+} from 'vscode';
 import { XMLParser } from 'fast-xml-parser';
 import type { LocaleMap, LocaleMapKey } from '../LocaleMap';
 import { SvgPreviewOnCode } from '../SvgPreviewOnCode';
@@ -80,28 +96,28 @@ function mockGenerator<
 
 async function openTextDocument(): Promise<
   {
-    document: vscode.TextDocument;
-    editor: vscode.TextEditor;
+    document: TextDocument;
+    editor: TextEditor;
   } & AsyncDisposable
 > {
-  const document = await vscode.workspace.openTextDocument();
-  const editor = await vscode.window.showTextDocument(document);
+  const document = await workspace.openTextDocument();
+  const editor = await window.showTextDocument(document);
   return {
     document,
     editor,
     async [Symbol.asyncDispose]() {
-      const targets: vscode.Tab[] = [];
-      for (const { tabs } of vscode.window.tabGroups.all) {
+      const targets: Tab[] = [];
+      for (const { tabs } of window.tabGroups.all) {
         for (const tab of tabs) {
           if (
-            tab.input instanceof vscode.TabInputText &&
+            tab.input instanceof TabInputText &&
             String(tab.input.uri) === String(document.uri)
           ) {
             targets.push(tab);
           }
         }
       }
-      await vscode.window.tabGroups.close(targets);
+      await window.tabGroups.close(targets);
     },
   };
 }
@@ -113,17 +129,15 @@ function timeout(elapse: number): Promise<void> {
 function getExtension<
   K extends 'svgPreviewDecorations' | 'deactivate' = 'svgPreviewDecorations',
 >(): Accessiblize<SvgPreviewOnCode, K> {
-  const extension = vscode.extensions.getExtension(
-    'sugoroku-y.svg-preview-on-code',
-  );
+  const extension = extensions.getExtension('sugoroku-y.svg-preview-on-code');
   assert.ok(extension?.isActive);
   return extension.exports as Accessiblize<SvgPreviewOnCode, K>;
 }
 
-function isDarkTheme(theme: vscode.ColorTheme) {
+function isDarkTheme(theme: ColorTheme) {
   return (
-    theme.kind === vscode.ColorThemeKind.Dark ||
-    theme.kind === vscode.ColorThemeKind.HighContrast
+    theme.kind === ColorThemeKind.Dark ||
+    theme.kind === ColorThemeKind.HighContrast
   );
 }
 
@@ -198,33 +212,25 @@ class AsyncDisposableStack implements AsyncDisposable {
 }
 
 async function ensureLightMode() {
-  if (!isDarkTheme(vscode.window.activeColorTheme)) {
+  if (!isDarkTheme(window.activeColorTheme)) {
     return;
   }
-  await vscode.commands.executeCommand(
-    'workbench.action.toggleLightDarkThemes',
-  );
+  await commands.executeCommand('workbench.action.toggleLightDarkThemes');
   return {
     async [Symbol.asyncDispose]() {
-      await vscode.commands.executeCommand(
-        'workbench.action.toggleLightDarkThemes',
-      );
+      await commands.executeCommand('workbench.action.toggleLightDarkThemes');
     },
   };
 }
 
 async function resetConfiguration() {
-  await vscode.workspace
+  await workspace
     .getConfiguration()
-    .update(
-      'svn-preview-on-code',
-      undefined,
-      vscode.ConfigurationTarget.Global,
-    );
+    .update('svn-preview-on-code', undefined, ConfigurationTarget.Global);
 }
 
 suite('Extension Test Suite', () => {
-  vscode.window.showInformationMessage('Start all tests.');
+  window.showInformationMessage('Start all tests.');
 
   const svg = '<svg xmlns="http://www.w3.org/2000/svg"></svg>';
   const dataScheme = 'data:image/png;base64,AAAA';
@@ -233,7 +239,7 @@ suite('Extension Test Suite', () => {
       text: string;
       language?: string;
       currentColor?: string;
-      colorThemeKind?: vscode.ColorThemeKind;
+      colorThemeKind?: ColorThemeKind;
       preset?: object;
       size?: number;
       width?: number;
@@ -250,27 +256,27 @@ suite('Extension Test Suite', () => {
     } = {},
   ) {
     await using stack = new AsyncDisposableStack();
-    stack.use(mock(vscode.env, 'language', spec.language ?? 'none'));
-    const config = vscode.workspace.getConfiguration();
+    stack.use(mock(env, 'language', spec.language ?? 'none'));
+    const config = workspace.getConfiguration();
     await config.update(
       'svg-preview-on-code.currentColor',
       spec.currentColor,
-      vscode.ConfigurationTarget.Global,
+      ConfigurationTarget.Global,
     );
     await config.update(
       'svg-preview-on-code.preset',
       spec.preset,
-      vscode.ConfigurationTarget.Global,
+      ConfigurationTarget.Global,
     );
     await config.update(
       'svg-preview-on-code.size',
       spec.size,
-      vscode.ConfigurationTarget.Global,
+      ConfigurationTarget.Global,
     );
     stack.asyncAdopt(resetConfiguration);
     stack.use(
-      mock(vscode.window, 'activeColorTheme', {
-        kind: spec.colorThemeKind ?? vscode.ColorThemeKind.Light,
+      mock(window, 'activeColorTheme', {
+        kind: spec.colorThemeKind ?? ColorThemeKind.Light,
       }),
     );
     const text =
@@ -287,20 +293,19 @@ suite('Extension Test Suite', () => {
       builder.insert(document.positionAt(0), text);
     });
     await timeout(500);
-    const [decoration, ...rest] = mocked
-      .yields[0] as vscode.DecorationOptions[];
+    const [decoration, ...rest] = mocked.yields[0] as DecorationOptions[];
     assert.equal(rest.length, 0);
     assert.ok(decoration);
     assert.ok(Array.isArray(decoration.hoverMessage));
     const dataUrl = expect.previewTitle?.match(/^Data URL/);
     assert.equal(decoration.hoverMessage.length, dataUrl ? 2 : 3);
-    assert.ok(decoration.hoverMessage[0] instanceof vscode.MarkdownString);
+    assert.ok(decoration.hoverMessage[0] instanceof MarkdownString);
     assert.match(decoration.hoverMessage[0].value, /^### (.*)$/);
     const previewTitle = RegExp.$1;
     if (expect.previewTitle) {
       assert.equal(previewTitle, expect.previewTitle);
     }
-    assert.ok(decoration.hoverMessage[1] instanceof vscode.MarkdownString);
+    assert.ok(decoration.hoverMessage[1] instanceof MarkdownString);
     assert.match(
       decoration.hoverMessage[1].value,
       /^!\[\]\(data:(.*?);base64,([A-Za-z0-9+/]+=*)\)$/,
@@ -339,7 +344,7 @@ suite('Extension Test Suite', () => {
       );
     }
     if (!dataUrl) {
-      assert.ok(decoration.hoverMessage[2] instanceof vscode.MarkdownString);
+      assert.ok(decoration.hoverMessage[2] instanceof MarkdownString);
       assert.match(
         decoration.hoverMessage[2].value,
         /^\[\$\(gear\) (.*)\]\(command:workbench.action.openSettings\?\["@ext:sugoroku-y.svg-preview-on-code"\]\)$/,
@@ -369,26 +374,26 @@ suite('Extension Test Suite', () => {
   });
   test('svg: dark mode', async () => {
     await decoration(
-      { text: svg, colorThemeKind: vscode.ColorThemeKind.Dark },
+      { text: svg, colorThemeKind: ColorThemeKind.Dark },
       { currentColor: 'white' },
     );
   });
   test('svg: light mode', async () => {
     await decoration({
       text: svg,
-      colorThemeKind: vscode.ColorThemeKind.Light,
+      colorThemeKind: ColorThemeKind.Light,
     });
   });
   test('svg: high contrast dark mode', async () => {
     await decoration(
-      { text: svg, colorThemeKind: vscode.ColorThemeKind.HighContrast },
+      { text: svg, colorThemeKind: ColorThemeKind.HighContrast },
       { currentColor: 'white' },
     );
   });
   test('svg: high contrast light mode', async () => {
     await decoration({
       text: svg,
-      colorThemeKind: vscode.ColorThemeKind.HighContrastLight,
+      colorThemeKind: ColorThemeKind.HighContrastLight,
     });
   });
   test('svg: width 100', async () => {
@@ -471,7 +476,7 @@ suite('Extension Test Suite', () => {
 
   test('actual edit', async () => {
     await using stack = new AsyncDisposableStack();
-    stack.use(mock(vscode.env, 'language', 'en'));
+    stack.use(mock(env, 'language', 'en'));
     stack.use(await ensureLightMode());
     await resetConfiguration();
     using mocked = mockGenerator(getExtension(), 'svgPreviewDecorations');
@@ -487,28 +492,28 @@ suite('Extension Test Suite', () => {
     assert.equal(mocked.yields[1].length, 1);
     const second = mocked.yields[1][0];
     assert.ok(typeof second === 'object' && second);
-    assert.ok('range' in second && second.range instanceof vscode.Range);
+    assert.ok('range' in second && second.range instanceof Range);
     assert.ok('hoverMessage' in second && Array.isArray(second.hoverMessage));
     assert.equal(
       JSON.stringify(second.range),
       '[{"line":0,"character":0},{"line":0,"character":46}]',
     );
     assert.equal(second.hoverMessage.length, 3);
-    assert.ok(second.hoverMessage[0] instanceof vscode.MarkdownString);
+    assert.ok(second.hoverMessage[0] instanceof MarkdownString);
     assert.equal(second.hoverMessage[0].value, '### SVG Preview');
-    assert.ok(second.hoverMessage[1] instanceof vscode.MarkdownString);
+    assert.ok(second.hoverMessage[1] instanceof MarkdownString);
     assert.equal(
       second.hoverMessage[1].value,
       '![](data:image/svg+xml;base64,PHN2ZyBjb2xvcj0iYmxhY2siIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIvPg==)',
     );
-    assert.ok(second.hoverMessage[2] instanceof vscode.MarkdownString);
+    assert.ok(second.hoverMessage[2] instanceof MarkdownString);
     assert.equal(
       second.hoverMessage[2].value,
       '[$(gear) Settings](command:workbench.action.openSettings?["@ext:sugoroku-y.svg-preview-on-code"])',
     );
     await editor.edit((builder) => {
       builder.delete(
-        new vscode.Range(
+        new Range(
           document.positionAt(0),
           document.positionAt(document.getText().length),
         ),
@@ -520,16 +525,16 @@ suite('Extension Test Suite', () => {
     assert.equal(mocked.yields[2].length, 1);
     const third = mocked.yields[2][0];
     assert.ok(typeof third === 'object' && third);
-    assert.ok('range' in third && third.range instanceof vscode.Range);
+    assert.ok('range' in third && third.range instanceof Range);
     assert.ok('hoverMessage' in third && Array.isArray(third.hoverMessage));
     assert.equal(
       JSON.stringify(third.range),
       '[{"line":0,"character":0},{"line":0,"character":26}]',
     );
     assert.equal(third.hoverMessage.length, 2);
-    assert.ok(third.hoverMessage[0] instanceof vscode.MarkdownString);
+    assert.ok(third.hoverMessage[0] instanceof MarkdownString);
     assert.equal(third.hoverMessage[0].value, '### Data URL Preview');
-    assert.ok(third.hoverMessage[1] instanceof vscode.MarkdownString);
+    assert.ok(third.hoverMessage[1] instanceof MarkdownString);
     assert.equal(
       third.hoverMessage[1].value,
       '![](data:image/png;base64,AAAA)',
@@ -538,7 +543,7 @@ suite('Extension Test Suite', () => {
 
   test('actual edit2', async () => {
     await using stack = new AsyncDisposableStack();
-    stack.use(mock(vscode.env, 'language', 'en'));
+    stack.use(mock(env, 'language', 'en'));
     await resetConfiguration();
     stack.use(await ensureLightMode());
     using mocked = mockGenerator(getExtension(), 'svgPreviewDecorations');
@@ -553,18 +558,14 @@ suite('Extension Test Suite', () => {
   }).timeout(10000);
   test('change Theme', async () => {
     await using stack = new AsyncDisposableStack();
-    stack.use(mock(vscode.env, 'language', 'en'));
+    stack.use(mock(env, 'language', 'en'));
     await resetConfiguration();
-    await vscode.workspace
+    await workspace
       .getConfiguration()
-      .update(
-        'svg-preview-on-code.size',
-        25,
-        vscode.ConfigurationTarget.Global,
-      );
+      .update('svg-preview-on-code.size', 25, ConfigurationTarget.Global);
     stack.asyncAdopt(resetConfiguration);
     stack.use(await ensureLightMode());
-    assert.throws(() => getExtension().activate({} as vscode.ExtensionContext));
+    assert.throws(() => getExtension().activate({} as ExtensionContext));
     await using opened = await openTextDocument();
     const { document, editor } = opened;
     await editor.edit((builder) => {
@@ -621,7 +622,7 @@ suite('Extension Test Suite', () => {
     await timeout(500);
     await editor.edit((builder) => {
       builder.delete(
-        new vscode.Range(
+        new Range(
           document.positionAt(0),
           document.positionAt(document.getText().length),
         ),
@@ -632,21 +633,17 @@ suite('Extension Test Suite', () => {
       );
     });
     await timeout(500);
-    await vscode.commands.executeCommand(
-      'workbench.action.toggleLightDarkThemes',
-    );
+    await commands.executeCommand('workbench.action.toggleLightDarkThemes');
     await editor.edit((builder) => {
       builder.delete(
-        new vscode.Range(
+        new Range(
           document.positionAt(0),
           document.positionAt(document.getText().length),
         ),
       );
     });
     await timeout(500);
-    await vscode.commands.executeCommand(
-      'workbench.action.toggleLightDarkThemes',
-    );
+    await commands.executeCommand('workbench.action.toggleLightDarkThemes');
     await timeout(500);
   }).timeout(10000);
 
@@ -657,26 +654,21 @@ suite('Extension Test Suite', () => {
   test('change language', async () => {
     await using opened = await openTextDocument();
     const { document, editor } = opened;
-    const config = vscode.workspace.getConfiguration('svg-preview-on-code', {
+    const config = workspace.getConfiguration('svg-preview-on-code', {
       languageId: 'html',
     });
-    await config.update(
-      'disable',
-      true,
-      vscode.ConfigurationTarget.Global,
-      true,
-    );
+    await config.update('disable', true, ConfigurationTarget.Global, true);
     await using _ = {
       async [Symbol.asyncDispose]() {
         await config.update(
           'disable',
           undefined,
-          vscode.ConfigurationTarget.Global,
+          ConfigurationTarget.Global,
           true,
         );
       },
     };
-    vscode.commands.executeCommand(
+    commands.executeCommand(
       'workbench.action.editor.changeLanguageMode',
       'HTML',
     );
@@ -691,7 +683,7 @@ suite('Extension Test Suite', () => {
       );
     });
     await timeout(500);
-    vscode.commands.executeCommand(
+    commands.executeCommand(
       'workbench.action.editor.changeLanguageMode',
       'JavaScript',
     );
@@ -719,7 +711,7 @@ suite('nls', () => {
       string,
     ][]) {
       test(`locale string(${key}) for ${language}`, () => {
-        using _ = mock(vscode.env, 'language', language);
+        using _ = mock(env, 'language', language);
         assert.equal(localeString(key), value);
       });
     }
