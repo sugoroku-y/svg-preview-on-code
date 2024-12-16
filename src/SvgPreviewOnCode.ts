@@ -40,9 +40,8 @@ type Configuration = TypedConfiguration<{
 }>;
 
 export class SvgPreviewOnCode {
-  private id?: string;
-  private section?: string;
-  private activated = false;
+  private readonly id: string;
+  private readonly section: string;
   private urlCache!: WeakMap<TextDocument, Map<string, string>>;
   private preset!: Partial<
     Record<`$$${SvgPresentationAttribute}`, string | number>
@@ -64,26 +63,17 @@ export class SvgPreviewOnCode {
   });
   private readonly decorationType = window.createTextEditorDecorationType({});
 
-  constructor() {
-    this.reset();
-  }
-
-  activate(context: ExtensionContext) {
-    if (this.activated) {
-      throw new Error();
-    }
+  constructor(context: ExtensionContext) {
+    // この拡張が不要になったときの後始末
+    context.subscriptions.push(this);
+    // この拡張のID
     this.id = context.extension.id;
-    this.section = this.id.match(/(?<=\.).*$/)?.[0];
-    this.reset();
-    this.activated = true;
-    context.subscriptions.push(
-      ((instance) => ({
-        dispose() {
-          instance.deactivate();
-        },
-      }))(this),
-    );
+    // この拡張の設定上のセクション名
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- extension.idには必ず`.`があるのでnullにはならない
+    [this.section] = this.id.match(/(?<=\.).*$/)!;
 
+    // 設定などからの読み込み
+    this.reset();
     // プレビューを設定
     this.update(window.activeTextEditor);
 
@@ -105,7 +95,9 @@ export class SvgPreviewOnCode {
         if (ev.document !== editor.document) {
           return;
         }
+        // 前回の変更から0.5秒たっていなければタイマーをリセット
         this.clearTimeout();
+        // 0.5秒後に再設定
         this.timeout = setTimeout(() => {
           this.update(editor);
         }, 500);
@@ -133,26 +125,19 @@ export class SvgPreviewOnCode {
       null,
       context.subscriptions,
     );
-    if (this.section) {
-      const { section } = this;
-      // 設定値の変更でも再設定
-      workspace.onDidChangeConfiguration(
-        (e) => {
-          if (e.affectsConfiguration(section)) {
-            this.updateVisibleEditors();
-          }
-        },
-        null,
-        context.subscriptions,
-      );
-    }
+    // 設定値の変更でも再設定
+    workspace.onDidChangeConfiguration(
+      (e) => {
+        if (e.affectsConfiguration(this.section)) {
+          this.updateVisibleEditors();
+        }
+      },
+      null,
+      context.subscriptions,
+    );
   }
 
-  private deactivate() {
-    if (!this.activated) {
-      return;
-    }
-    this.activated = false;
+  dispose() {
     for (const document of workspace.textDocuments) {
       this.urlCache.delete(document);
     }

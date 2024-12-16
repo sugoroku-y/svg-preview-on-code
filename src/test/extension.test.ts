@@ -5,7 +5,6 @@ import { createInterface } from 'readline';
 import {
   type ColorTheme,
   type DecorationOptions,
-  type ExtensionContext,
   type Tab,
   type TextDocument,
   type TextEditor,
@@ -565,7 +564,6 @@ suite('Extension Test Suite', () => {
       .update('svg-preview-on-code.size', 25, ConfigurationTarget.Global);
     stack.asyncAdopt(resetConfiguration);
     stack.use(await ensureLightMode());
-    assert.throws(() => getExtension().activate({} as ExtensionContext));
     await using opened = await openTextDocument();
     const { document, editor } = opened;
     await editor.edit((builder) => {
@@ -646,10 +644,6 @@ suite('Extension Test Suite', () => {
     await commands.executeCommand('workbench.action.toggleLightDarkThemes');
     await timeout(500);
   }).timeout(10000);
-
-  test('duplicate deactivate', () => {
-    getExtension<'deactivate'>().deactivate();
-  });
 
   test('change language', async () => {
     await using opened = await openTextDocument();

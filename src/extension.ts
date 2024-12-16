@@ -5,9 +5,7 @@ import { SvgPreviewOnCode } from './SvgPreviewOnCode';
  * VSCode拡張のエントリポイント
  */
 export function activate(context: ExtensionContext) {
-  const extension = new SvgPreviewOnCode();
-  extension.activate(context);
-  return extension;
+  return new SvgPreviewOnCode(context);
 }
 
 /**
