@@ -2,6 +2,14 @@
 
 ## Release
 
+- `0.1.2`
+
+  - Changed the target VS Code version to 1.96.
+  - Upgraded the version of the XML parser used.
+
+  > - 対象とするVS Codeのバージョンを1.96に変更。
+  > - 使用するXMLパーザーのバージョンアップ。
+
 - `0.1.1`
 
   - Fixed to preview even if the base64 part of Data URL is incomplete.
