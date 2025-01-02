@@ -6,6 +6,14 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "run buildIcon",
+      "program": "${workspaceFolder}/images/converter",
+      "args": ["images/svg-preview-on-code.svg"],
+      "request": "launch",
+      "skipFiles": ["<node_internals>/**"],
+      "type": "node"
+    },
+    {
       "name": "Run Extension",
       "type": "extensionHost",
       "request": "launch",
