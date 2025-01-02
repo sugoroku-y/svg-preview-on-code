@@ -17,11 +17,26 @@ import {
 } from './SvgPresentationAttribute';
 import { localeString } from './localeString';
 
+/**
+ * ユニオン型をインターセクション型に変換します。
+ *
+ * @example
+ * ```ts
+ * type T = UnionToIntersection<{a: string} | {b: number}>`;
+ * // -> {a: string} & {b: number}
+ */
 type UnionToIntersection<U> = (U extends U ? (a: U) => 0 : never) extends (
   a: infer R,
 ) => 0
   ? R
   : never;
+/**
+ * 型付きのゲッターを持つ設定オブジェクトを表す型。
+ *
+ * WorkspaceConfigurationインターフェースを拡張し、設定プロパティへの型付きアクセスを提供します。
+ *
+ * @template T - 設定オブジェクトの型。
+ */
 type TypedConfiguration<T extends object> = Readonly<Partial<T>> &
   UnionToIntersection<
     {
@@ -32,6 +47,9 @@ type TypedConfiguration<T extends object> = Readonly<Partial<T>> &
     }[keyof T]
   > &
   WorkspaceConfiguration;
+/**
+ * SVGプレビュー拡張機能の設定を表す型。
+ */
 type Configuration = TypedConfiguration<{
   disable: boolean;
   preset: Record<string, string | number>;
@@ -63,6 +81,14 @@ export class SvgPreviewOnCode {
   });
   private readonly decorationType = window.createTextEditorDecorationType({});
 
+  /**
+   * SvgPreviewOnCodeのインスタンスを作成します。
+   *
+   * SVGプレビューを構成するため
+   * 拡張機能を初期化し、イベントリスナーを設定し、します。
+   *
+   * @param context - VS Codeから提供される拡張機能のコンテキスト
+   */
   constructor(context: ExtensionContext) {
     // この拡張が不要になったときの後始末
     context.subscriptions.push(this);
@@ -144,10 +170,27 @@ export class SvgPreviewOnCode {
     this.decorationType.dispose();
   }
 
+  /**
+   * SVGプレビュー拡張機能の設定を取得します。
+   *
+   * @param document - 設定を取得するテキストドキュメント。
+   *
+   * 省略時は、グローバル設定が使用されます。
+   */
   private getConfiguration(document?: TextDocument) {
     return workspace.getConfiguration(this.section, document) as Configuration;
   }
 
+  /**
+   * SVGプレビュー拡張機能の設定をリセットします。
+   *
+   * 1. 設定値を取得
+   * 2. URLキャッシュを初期化
+   * 3. SVG要素のプリセット属性を設定
+   *    - currentColorが指定されている場合はそれを使用
+   *    - 指定されていない場合はカラーテーマに応じて白または黒を使用
+   *    - presetが指定されている場合はそれを使用
+   */
   private reset() {
     const { size, preset, currentColor } = this.getConfiguration();
     this.size = size;
@@ -178,6 +221,11 @@ export class SvgPreviewOnCode {
     }
   }
 
+  /**
+   * 編集時のディレイ反映用タイムアウトをクリアします。
+   *
+   * このメソッドは、連続して行われた編集による更新を一度だけにするために使用されます。
+   */
   private clearTimeout() {
     if (this.timeout) {
       clearTimeout(this.timeout);
@@ -185,6 +233,14 @@ export class SvgPreviewOnCode {
     }
   }
 
+  /**
+   * 指定されたテキストエディタのSVGプレビューのデコレーションを更新します。
+   *
+   * 1. 編集時のディレイ反映用タイムアウトをクリア
+   * 2. 現在のドキュメントに基づいて新しいデコレーションを設定
+   *
+   * @param editor - 更新するテキストエディタ。未定義の場合は何も行いません。
+   */
   private update(editor: TextEditor | undefined) {
     this.clearTimeout();
     if (!editor) {
@@ -194,6 +250,13 @@ export class SvgPreviewOnCode {
       ...this.svgPreviewDecorations(editor.document),
     ]);
   }
+  /**
+   * すべての表示されているテキストエディタのSVGプレビューを更新します。
+   *
+   * このメソッドは、設定が変更されたときやカラーテーマが変更されたときに呼び出されます。
+   *
+   * 設定をリセットし、URLキャッシュをクリアし、すべての表示されているエディタのデコレーションを更新します。
+   */
   private updateVisibleEditors() {
     const oldCache = this.urlCache;
     this.reset();
@@ -207,6 +270,17 @@ export class SvgPreviewOnCode {
 
   private static readonly IgnoreError = {} as Error;
 
+  /**
+   * 与えられたドキュメント内のSVGプレビューのためのDecorationOptionsを生成する。
+   *
+   * このメソッドは以下の手順で処理を行う。
+   * 1. SVG要素またはデータURLについてドキュメントを解析
+   * 2. base64エンコードされたデータURLに変換
+   * 3. SVGプレビューを含むホバーメッセージを持つDecorationOptionsを生成
+   *
+   * @param document - The text document to generate SVG preview decorations for.
+   * @returns A generator that yields decoration options for SVG previews.
+   */
   private *svgPreviewDecorations(
     document: TextDocument,
   ): Generator<DecorationOptions, void, undefined> {
@@ -216,11 +290,14 @@ export class SvgPreviewOnCode {
     const previousMap = this.urlCache.get(document);
     const nextMap = new Map<string, string>();
     let comingNew = false;
+    // SVG要素とDataスキームURIを抽出する正規表現
+    const svgRegex =
+      /(<svg\s[^>]*>.*?<\/svg>)|\bdata:image\/\w+(?:\+\w+)?;base64,[A-Za-z0-9+/]+=*/gs;
+
+    // 文書テキスト中のSVG要素とDataスキームURIを順次処理する
     for (const { index, 0: match, 1: svg } of document
       .getText()
-      .matchAll(
-        /(<svg\s[^>]*>.*?<\/svg>)|\bdata:image\/\w+(?:\+\w+)?;base64,[A-Za-z0-9+/]+=*/gs,
-      )) {
+      .matchAll(svgRegex)) {
       // タグ前後の空白を除去したものをキャッシュのキーにする(dataスキームはキャッシュ対象外)
       const normalized = svg?.replace(/(?<=>)\s+|\s+(?=<)/g, '');
       try {

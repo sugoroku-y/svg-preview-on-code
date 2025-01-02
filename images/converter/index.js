@@ -8,33 +8,41 @@ const { launch } = require('puppeteer');
 const yargs = require('yargs');
 
 /**
+ * 指定されたロケールマップからローカライズ関数を生成する。
  *
  * @template {Record<string, Record<string, string>>} MAPS
- * @param {ValidationLocaleMaps<MAPS>} map
- * @param {string} [locale]
- * @returns {LocalizeFunction<MAPS>}
+ * @param {ValidationLocaleMaps<MAPS>} map - ロケールマップ
+ * @param {string} [locale] - オプションのロケール
+ * @returns {LocalizeFunction<MAPS>} - ローカライズ関数を返す。
  */
 function localizer(map, locale) {
   localize.locale = locale;
   return localize;
 
   /**
+   * 指定されたメッセージをローカライズします。
    * @template {keyof MAPS[keyof MAPS] & string} KEY
-   * @param {KEY} message
-   * @param {LocalizeParameter<KEY>} _
+   * @param {KEY} message - ローカライズするメッセージ
+   * @param {LocalizeParameter<KEY>} _ - メッセージのパラメータ
    */
   function localize(message, ...[params]) {
+    // ロケールを取得
     const locale = localize.locale ?? '';
+    // 言語コードを取得
     const language = locale.match(/^(\w+)(?=_)/)?.[0] ?? '';
     const localeMap = map[locale];
+    // ロケールマップと言語マップを取得
     const languageMap = map[language];
+    // ローカライズされたメッセージを取得
     const localized = localeMap?.[message] ?? languageMap?.[message] ?? message;
+    // メッセージ内のプレースホルダーを置換
     return localized.replace(/\$(?:\$|\{([^${}]*)\})/g, (match, key) =>
       key ? (params?.[key] ?? '') : match === '$$' ? '$' : match,
     );
   }
 }
 
+// ローカライズ関数を初期化
 const localize = localizer({
   ja: {
     'Convert the image file to a specified type of image file.':
@@ -69,8 +77,51 @@ const localize = localizer({
       '変換元と変換先が同じです。別のファイル名を指定してください。: ${source}',
   },
 });
+// ロケールのデフォルトはyargsのロケールから取得
 localize.locale = yargs.locale();
 
+/** 
+ * chromeが出力可能な画像の種類とその拡張子のマップ
+ * @type {Record<'png' | 'jpeg' | 'webp', {re: RegExp; ext: string}>}
+ */
+const imageTypes = {
+  png: {
+    re: /\.png$/i,
+    ext: '.png',
+  },
+  jpeg: {
+    re: /\.(?:jpeg?|jpg|jfif?)$/i,
+    ext: '.jpg',
+  },
+  webp: {
+    re: /\.webp$/i,
+    ext: '.webp',
+  },
+};
+
+/**
+ * chromeが読み込める画像形式の拡張子とMIMEタイプの対応
+ */
+const mediaTypes = {
+  apng: 'image/apng',
+  avif: 'image/avif',
+  bmp: 'image/x-ms-bmp',
+  gif: 'image/gif',
+  ico: 'image/vnd.microsoft.icon',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  jpe: 'image/jpeg',
+  jfif: 'image/jpeg',
+  jfi: 'image/jpeg',
+  png: 'image/png',
+  svg: 'image/svg+xml',
+  tiff: 'image/tiff',
+  tif: 'image/tiff',
+  webp: 'image/webp',
+  xbm: 'image/x-bitmap',
+};
+
+/** コマンドライン引数の解析結果 */
 const args = yargs
   .command(
     '* <source> [<destination>]',
@@ -111,26 +162,24 @@ const args = yargs
         }),
       );
     }
-    if (
-      // chromeで扱える画像ファイルの拡張子でなければエラー
-      !/\.(?:xbm|tif|jfif|ico|tiff|gif|svgz?|p?jpe?g|webp|a?png|bmp|pjp|avif)$/i.test(
-        source,
-      )
-    ) {
+    // chromeで扱える画像ファイルの拡張子でなければエラー
+    if (extname(source).slice(1).toLowerCase() in mediaTypes) {
       throw new Error(
         localize('Unsupported the image type: ${type}', { type: source }),
       );
     }
     if (destination) {
-      const match = /\.(png|jpe?g|webp)$/i.exec(destination);
-      if (!match) {
+      const destType = Object.entries(imageTypes).find(([, { re }]) =>
+        re.test(destination),
+      )?.[0];
+      if (!destType) {
         throw new Error(
           localize('Unsupported the image type: ${type}', {
             type: destination,
           }),
         );
       }
-      if (type && type.charAt(0) !== match[1].charAt(0).toLowerCase()) {
+      if (type && destType !== type) {
         throw new Error(
           localize('The destination file is not ${type}: ${destination}', {
             destination,
@@ -153,26 +202,21 @@ const args = yargs
     localize('Convert the image file to a specified type of image file.'),
   );
   const { source, type: _type, destination: _destination, size } = args;
+  // typeとdestinationについてはyargsでも省略時の値を生成できないのでここで処理
   const type =
     _type ??
     (_destination
       ? // destinationが指定されていればその拡張子から種類を判別
-        /\.png$/i.test(_destination)
-        ? 'png'
-        : /\.jpe?g$/i.test(_destination)
-          ? 'jpeg'
-          : /\.webp$/i.test(_destination)
-            ? 'webp'
-            : // yargsのcheckでdestinationの拡張子をチェックしているのでここには来ない
-              error`unreachable`
+        (Object.entries(imageTypes).find(([, { re }]) =>
+          re.test(_destination),
+        )?.[0] ??
+        // yargsのcheckでdestinationの拡張子をチェックしているのでここには来ない
+        error`unreachable`)
       : // destinationが指定されていなければPNG
         'png');
   const destination =
     _destination ?? // destinationが指定されていなければsourceの拡張子をtypeにあわせて変更
-    source.replace(
-      /\.\w+$/i,
-      { png: '.png', webp: '.webp', jpeg: '.jpg' }[type],
-    );
+    source.replace(/\.\w+$/i, imageTypes[type].ext);
   if (destination === source) {
     throw new Error(
       localize(
@@ -181,18 +225,17 @@ const args = yargs
       ),
     );
   }
+  // サイズ指定があれば幅と高さを取得
   const [, width, height = width] =
     (size && /^(\d+)(?:x(\d+))?$/.exec(size)) || [];
   // puppeteerの準備
   const browser = await launch();
   const page = await browser.newPage();
   console.log(localize('loading the image file: ${source}', { source }));
-  const sourceType =
-    source.match(/(?<=\.)\w+$/i)?.[0].toLowerCase() ??
-    // sourceの拡張子チェックはyargsのcheckで行っているのでここには来ない
-    error`unreachable`;
   const svgUrl = dataUrl(
-    `image/${{ svg: 'svg+xml', jpg: 'jpeg' }[sourceType] ?? sourceType}`,
+    mediaTypes[extname(source).slice(1).toLowerCase()] ??
+      // yargsでチェック済なのでsourceの拡張子はmediaTypesに必ずある
+      error`unreachable`,
     await readFile(source).catch((cause) => {
       throw new Error(
         localize('Failed to load the image file: ${source}', { source }),
@@ -233,6 +276,7 @@ const args = yargs
     type,
   );
   if (typeof pngUrl !== 'string') {
+    console.log(pngUrl);
     throw new Error(
       localize('Failed to load the image file: ${source}', { source }),
     );
@@ -277,6 +321,7 @@ const args = yargs
 })();
 
 /**
+ * 例外を発生させるタグ付きテンプレートリテラル
  * @param {[TemplateStringsArray, ...unknown[]]} args
  * @returns {never}
  */
@@ -285,6 +330,7 @@ function error(...args) {
 }
 
 /**
+ * Data URLを生成する
  * @param {string} type
  * @param {string | Uint8Array} source
  * @returns
