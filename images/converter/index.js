@@ -163,7 +163,7 @@ const args = yargs
       );
     }
     // chromeで扱える画像ファイルの拡張子でなければエラー
-    if (extname(source).slice(1).toLowerCase() in mediaTypes) {
+    if (!(extname(source).slice(1).toLowerCase() in mediaTypes)) {
       throw new Error(
         localize('Unsupported the image type: ${type}', { type: source }),
       );
