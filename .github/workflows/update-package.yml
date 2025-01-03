@@ -26,8 +26,16 @@ jobs:
         env:
           DISPLAY: ':99.0'
         if: steps.git_status.outcome == 'success'
+      - name: get updated modules
+        run: |
+          echo "diff=`git diff package.json | grep -E '^\+ '`" >> "$GITHUB_OUTPUT"
+        id: updated_modules
+        if: steps.git_status.outcome == 'success'
       - name: Auto Commit
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: Update package
+          commit_message: |
+            Update package
+            
+            {{ steps.updated_modules.outputs.diff }}
         if: steps.git_status.outcome == 'success'
