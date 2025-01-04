@@ -37,5 +37,5 @@ jobs:
           commit_message: |
             Update package
             
-            {{ steps.updated_modules.outputs.diff }}
+            ${{ steps.updated_modules.outputs.diff }}
         if: steps.git_status.outcome == 'success'
