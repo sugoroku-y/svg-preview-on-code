@@ -28,7 +28,9 @@ jobs:
         if: steps.git_status.outcome == 'success'
       - name: get updated modules
         run: |
-          echo "diff=`git diff package.json | grep -E '^\+ ' | sed 's/[",^+]//g'`" >> "$GITHUB_OUTPUT"
+          echo "diff<<EOF" >> "$GITHUB_OUTPUT"
+          git diff package.json | grep -E '^\+ ' | sed 's/[",^+]//g' >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
         id: updated_modules
         if: steps.git_status.outcome == 'success'
       - name: Auto Commit
