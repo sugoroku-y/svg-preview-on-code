@@ -60,10 +60,10 @@ type Configuration = TypedConfiguration<{
 export class SvgPreviewOnCode {
   private readonly id: string;
   private readonly section: string;
-  private urlCache!: WeakMap<TextDocument, Map<string, string>>;
-  private preset!: Partial<
+  private urlCache = new WeakMap<TextDocument, Map<string, string>>();
+  private preset: Partial<
     Record<`$$${SvgPresentationAttribute}`, string | number>
-  >;
+  > = {};
   private size?: number;
   private timeout?: NodeJS.Timeout;
 
@@ -84,13 +84,12 @@ export class SvgPreviewOnCode {
   /**
    * SvgPreviewOnCodeのインスタンスを作成します。
    *
-   * SVGプレビューを構成するため
-   * 拡張機能を初期化し、イベントリスナーを設定し、します。
+   * SVGプレビューを構成するため、プロパティを初期化し、イベントリスナーを設定
    *
    * @param context - VS Codeから提供される拡張機能のコンテキスト
    */
   constructor(context: ExtensionContext) {
-    // この拡張が不要になったときの後始末
+    // この拡張が不要になったときの後始末を設定
     context.subscriptions.push(this);
     // この拡張のID
     this.id = context.extension.id;
@@ -100,7 +99,7 @@ export class SvgPreviewOnCode {
 
     // 設定などからの読み込み
     this.reset();
-    // プレビューを設定
+    // アクティブなプレビューを設定
     this.update(window.activeTextEditor);
 
     // ドキュメントを切り替え時に再設定
@@ -161,6 +160,14 @@ export class SvgPreviewOnCode {
       null,
       context.subscriptions,
     );
+    // ドキュメントが閉じられたときはキャッシュを削除
+    workspace.onDidCloseTextDocument(
+      (document) => {
+        this.urlCache.delete(document);
+      },
+      null,
+      context.subscriptions,
+    );
   }
 
   dispose() {
@@ -177,7 +184,7 @@ export class SvgPreviewOnCode {
    *
    * 省略時は、グローバル設定が使用されます。
    */
-  private getConfiguration(document?: TextDocument) {
+  private getConfiguration(document?: TextDocument): Configuration {
     return workspace.getConfiguration(this.section, document) as Configuration;
   }
 
@@ -194,7 +201,10 @@ export class SvgPreviewOnCode {
   private reset() {
     const { size, preset, currentColor } = this.getConfiguration();
     this.size = size;
-    this.urlCache = new WeakMap<TextDocument, Map<string, string>>();
+    if ('$$color' in this.preset) {
+      // constructorでの初期化直後はキャッシュのリセット不要(初期化直後のpresetには$$colorが含まれない)
+      this.urlCache = new WeakMap<TextDocument, Map<string, string>>();
+    }
     this.preset = {
       // currentColorに使用される色を指定する
       $$color:
@@ -207,6 +217,7 @@ export class SvgPreviewOnCode {
         }[window.activeColorTheme.kind],
     };
     if (preset) {
+      // 設定のpresetに指定されたsvgのプレゼンテーション属性をコピー
       for (const [name, value] of Object.entries(preset)) {
         if (
           // SVGのプレゼンテーション属性のみ受け付ける
@@ -287,17 +298,21 @@ export class SvgPreviewOnCode {
     if (this.getConfiguration(document).disable) {
       return;
     }
-    const previousMap = this.urlCache.get(document);
+    const text = document.getText();
+    if (!text) {
+      return;
+    }
+    const previousMap =
+      this.urlCache.get(document) ?? new Map<string, string>();
     const nextMap = new Map<string, string>();
+    // 新規で追加されるものがあるか
     let comingNew = false;
     // SVG要素とDataスキームURIを抽出する正規表現
     const svgRegex =
       /(<svg\s[^>]*>.*?<\/svg>)|\bdata:image\/\w+(?:\+\w+)?;base64,[A-Za-z0-9+/]+=*/gs;
 
     // 文書テキスト中のSVG要素とDataスキームURIを順次処理する
-    for (const { index, 0: match, 1: svg } of document
-      .getText()
-      .matchAll(svgRegex)) {
+    for (const { index, 0: match, 1: svg } of text.matchAll(svgRegex)) {
       // タグ前後の空白を除去したものをキャッシュのキーにする(dataスキームはキャッシュ対象外)
       const normalized = svg?.replace(/(?<=>)\s+|\s+(?=<)/g, '');
       try {
@@ -307,7 +322,7 @@ export class SvgPreviewOnCode {
             return match;
           }
           // キャッシュにあればそちらを使う
-          const cached = previousMap?.get(normalized);
+          const cached = previousMap.get(normalized);
           if (cached) {
             if (cached === 'error') {
               // 前回何らかの問題があったものは最初からエラーにする
@@ -326,7 +341,7 @@ export class SvgPreviewOnCode {
                 },
               ];
             } catch {
-              // parseで発生するエラーは無視するエラーに置き換えて投げ直す
+              // 編集途中のSVGは普通に解析エラーが発生するため無視する例外として投げなおす
               throw SvgPreviewOnCode.IgnoreError;
             }
           })();
@@ -398,24 +413,24 @@ export class SvgPreviewOnCode {
         if (normalized) {
           // 生成失敗したこともキャッシュする
           nextMap.set(normalized, 'error');
-          if (!previousMap?.has(normalized)) {
+          if (!previousMap.has(normalized)) {
             comingNew = true;
           }
         }
         /* c8 ignore next 4 IgnoreError以外の例外をテストで発生させられないのでカバレッジ計測からは除外 */
         if (ex !== SvgPreviewOnCode.IgnoreError) {
           // 無視するエラーでなくてもログに出すだけ
-          console.error(ex);
+          console.error('Failed to generate SVG preview:', ex);
         }
       }
     }
     if (nextMap.size) {
-      if (comingNew || nextMap.size !== previousMap?.size) {
-        // 変化があったときだけ更新
+      if (comingNew || nextMap.size !== previousMap.size) {
+        // 新規で追加、もしくは数が変わった、つまり変化があったときだけ更新
         this.urlCache.set(document, nextMap);
       }
-    } else if (previousMap) {
-      // ひとつも無くなったら削除
+    } else if (previousMap.size) {
+      // もともとあったのに、ひとつも無くなったら削除
       this.urlCache.delete(document);
     }
   }
