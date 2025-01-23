@@ -24,7 +24,7 @@ import type { LocaleMap, LocaleMapKey } from '../LocaleMap';
 import { SvgPreviewOnCode } from '../SvgPreviewOnCode';
 import { localeString } from '../localeString';
 
-type Accessiblize<T, K extends PropertyKey> = Omit<T, K> & {
+type Accessibilize<T, K extends PropertyKey> = Omit<T, K> & {
   // @ts-expect-error privateメンバーにアクセスするために必要
   [KK in K]: T[KK];
 };
@@ -127,10 +127,10 @@ function timeout(elapse: number): Promise<void> {
 
 function getExtension<
   K extends 'svgPreviewDecorations' | 'deactivate' = 'svgPreviewDecorations',
->(): Accessiblize<SvgPreviewOnCode, K> {
+>(): Accessibilize<SvgPreviewOnCode, K> {
   const extension = extensions.getExtension('sugoroku-y.svg-preview-on-code');
   assert.ok(extension?.isActive);
-  return extension.exports as Accessiblize<SvgPreviewOnCode, K>;
+  return extension.exports as Accessibilize<SvgPreviewOnCode, K>;
 }
 
 function isDarkTheme(theme: ColorTheme) {
