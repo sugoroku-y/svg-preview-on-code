@@ -79,7 +79,7 @@
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-eslint-comments": "^3.2.0",
     "eslint-plugin-import": "^2.31.0",
-    "eslint-plugin-jsdoc": "^50.6.2",
+    "eslint-plugin-jsdoc": "^50.6.3",
     "globals": "^15.14.0",
     "prettier": "^3.4.2",
     "puppeteer": "^23.11.1",
