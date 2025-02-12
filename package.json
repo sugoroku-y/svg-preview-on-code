@@ -80,7 +80,7 @@
     "eslint-plugin-eslint-comments": "^3.2.0",
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-jsdoc": "^50.6.3",
-    "globals": "^15.14.0",
+    "globals": "^15.15.0",
     "prettier": "^3.5.0",
     "puppeteer": "^23.11.1",
     "typescript": "^5.7.3",
