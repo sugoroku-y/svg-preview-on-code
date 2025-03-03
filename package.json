@@ -70,7 +70,7 @@
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
-    "@types/node": "^20.17.22",
+    "@types/node": "^20.17.23",
     "@types/vscode": "^1.97.0",
     "@types/yargs": "^17.0.33",
     "@vscode/test-cli": "^0.0.10",
@@ -81,10 +81,10 @@
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-jsdoc": "^50.6.3",
     "globals": "^15.15.0",
-    "prettier": "^3.5.2",
+    "prettier": "^3.5.3",
     "puppeteer": "^23.11.1",
-    "typescript": "^5.7.3",
-    "typescript-eslint": "^8.25.0",
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.26.0",
     "yargs": "^17.7.2"
   },
   "dependencies": {
