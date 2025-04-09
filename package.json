@@ -74,7 +74,7 @@
     "@types/vscode": "^1.99.1",
     "@types/yargs": "^17.0.33",
     "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.5.1",
+    "@vscode/test-electron": "^2.5.2",
     "eslint": "^9.24.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-eslint-comments": "^3.2.0",
