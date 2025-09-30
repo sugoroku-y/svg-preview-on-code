@@ -83,7 +83,7 @@
     "globals": "^15.15.0",
     "prettier": "^3.6.2",
     "puppeteer": "^23.11.1",
-    "typescript": "^5.9.2",
+    "typescript": "^5.9.3",
     "typescript-eslint": "^8.45.0",
     "yargs": "^17.7.2"
   },
