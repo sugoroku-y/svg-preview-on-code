@@ -70,7 +70,7 @@
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
-    "@types/node": "^20.19.25",
+    "@types/node": "^20.19.26",
     "@types/vscode": "^1.106.1",
     "@types/yargs": "^17.0.35",
     "@vscode/test-cli": "^0.0.10",
@@ -84,7 +84,7 @@
     "prettier": "^3.7.4",
     "puppeteer": "^23.11.1",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.48.1",
+    "typescript-eslint": "^8.49.0",
     "yargs": "^17.7.2"
   },
   "dependencies": {
