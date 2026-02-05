@@ -70,7 +70,7 @@
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
-    "@types/node": "^20.19.31",
+    "@types/node": "^20.19.32",
     "@types/vscode": "^1.109.0",
     "@types/yargs": "^17.0.35",
     "@vscode/test-cli": "^0.0.10",
