@@ -379,7 +379,7 @@ export class SvgPreviewOnCode {
           };
           // Base64エンコードしてDataスキームURIにする
           const newUrl = `data:image/svg+xml;base64,${Buffer.from(
-            this.builder.build(svg) as string,
+            this.builder.build(svg),
           ).toString('base64')}`;
           // 生成した画像URLはキャッシュしておく
           nextMap.set(normalized, newUrl);
