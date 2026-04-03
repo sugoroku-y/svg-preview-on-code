@@ -70,7 +70,7 @@
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
-    "@types/node": "^20.19.37",
+    "@types/node": "^20.19.39",
     "@types/vscode": "^1.110.0",
     "@types/yargs": "^17.0.35",
     "@vscode/test-cli": "^0.0.10",
@@ -88,6 +88,6 @@
     "yargs": "^17.7.2"
   },
   "dependencies": {
-    "fast-xml-parser": "^4.5.5"
+    "fast-xml-parser": "^4.5.6"
   }
 }
