@@ -83,8 +83,8 @@
     "globals": "^15.15.0",
     "prettier": "^3.8.3",
     "puppeteer": "^23.11.1",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.58.2",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.1",
     "yargs": "^17.7.2"
   },
   "dependencies": {
