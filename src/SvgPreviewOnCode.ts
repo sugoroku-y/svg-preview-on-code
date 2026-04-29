@@ -185,7 +185,7 @@ export class SvgPreviewOnCode {
    * 省略時は、グローバル設定が使用されます。
    */
   private getConfiguration(document?: TextDocument): Configuration {
-    return workspace.getConfiguration(this.section, document) as Configuration;
+    return workspace.getConfiguration(this.section, document);
   }
 
   /**
