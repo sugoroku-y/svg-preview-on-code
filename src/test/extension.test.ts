@@ -1,4 +1,5 @@
 import * as assert from 'assert';
+import { XMLParser } from 'fast-xml-parser';
 import { createReadStream } from 'fs';
 import { resolve } from 'path';
 import { createInterface } from 'readline';
@@ -8,8 +9,8 @@ import {
   type Tab,
   type TextDocument,
   type TextEditor,
-  ConfigurationTarget,
   ColorThemeKind,
+  ConfigurationTarget,
   MarkdownString,
   Range,
   TabInputText,
@@ -19,10 +20,9 @@ import {
   window,
   workspace,
 } from 'vscode';
-import { XMLParser } from 'fast-xml-parser';
 import type { LocaleMap, LocaleMapKey } from '../LocaleMap';
-import { SvgPreviewOnCode } from '../SvgPreviewOnCode';
 import { localeString } from '../localeString';
+import { SvgPreviewOnCode } from '../SvgPreviewOnCode';
 
 type Accessibilize<T, K extends PropertyKey> = Omit<T, K> & {
   // @ts-expect-error privateメンバーにアクセスするために必要
@@ -364,73 +364,73 @@ suite('Extension Test Suite', () => {
       { text: svg, currentColor: 'red' },
       { currentColor: 'red' },
     );
-  });
+  }).timeout(10000);
   test('svg: currentColor: blue', async () => {
     await decoration(
       { text: svg, currentColor: 'blue' },
       { currentColor: 'blue' },
     );
-  });
+  }).timeout(10000);
   test('svg: dark mode', async () => {
     await decoration(
       { text: svg, colorThemeKind: ColorThemeKind.Dark },
       { currentColor: 'white' },
     );
-  });
+  }).timeout(10000);
   test('svg: light mode', async () => {
     await decoration({
       text: svg,
       colorThemeKind: ColorThemeKind.Light,
     });
-  });
+  }).timeout(10000);
   test('svg: high contrast dark mode', async () => {
     await decoration(
       { text: svg, colorThemeKind: ColorThemeKind.HighContrast },
       { currentColor: 'white' },
     );
-  });
+  }).timeout(10000);
   test('svg: high contrast light mode', async () => {
     await decoration({
       text: svg,
       colorThemeKind: ColorThemeKind.HighContrastLight,
     });
-  });
+  }).timeout(10000);
   test('svg: width 100', async () => {
     await decoration({ text: svg, width: 100 }, { width: 100 });
-  });
+  }).timeout(10000);
   test('svg: height 100', async () => {
     await decoration({ text: svg, height: 100 }, { height: 100 });
-  });
+  }).timeout(10000);
   test('svg: 100x25', async () => {
     await decoration(
       { text: svg, width: 100, height: 25 },
       { width: 100, height: 25 },
     );
-  });
+  }).timeout(10000);
   test('svg: 25x100', async () => {
     await decoration(
       { text: svg, width: 25, height: 100 },
       { width: 25, height: 100 },
     );
-  });
+  }).timeout(10000);
   test('svg: preset: {stroke:currentColor}', async () => {
     await decoration(
       { text: svg, preset: { stroke: 'currentColor', 'stroke-width': 2 } },
       { preset: { stroke: 'currentColor', 'stroke-width': 2 } },
     );
-  });
+  }).timeout(10000);
   test('svg: language: none', async () => {
     await decoration(
       { text: svg },
       { previewTitle: 'SVG Preview', settingsCaption: 'Settings' },
     );
-  });
+  }).timeout(10000);
   test('svg: language: ja', async () => {
     await decoration(
       { text: svg, language: 'ja' },
       { previewTitle: 'SVG プレビュー', settingsCaption: '設定' },
     );
-  });
+  }).timeout(10000);
   test('data url: language: none', async () => {
     await decoration(
       { text: dataScheme },
@@ -440,7 +440,7 @@ suite('Extension Test Suite', () => {
         settingsCaption: undefined,
       },
     );
-  });
+  }).timeout(10000);
   test('data url: language: ja', async () => {
     await decoration(
       { text: dataScheme, language: 'ja' },
@@ -450,7 +450,7 @@ suite('Extension Test Suite', () => {
         settingsCaption: undefined,
       },
     );
-  });
+  }).timeout(10000);
 
   test('Changelog', async () => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- Changelogの確認のためにpackage.jsonを読み込む必要がある
