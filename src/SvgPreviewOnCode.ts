@@ -207,14 +207,17 @@ export class SvgPreviewOnCode {
     }
     this.preset = {
       // currentColorに使用される色を指定する
-      $$color:
-        currentColor ||
-        {
-          [ColorThemeKind.Dark]: 'white',
-          [ColorThemeKind.HighContrast]: 'white',
-          [ColorThemeKind.Light]: 'black',
-          [ColorThemeKind.HighContrastLight]: 'black',
-        }[window.activeColorTheme.kind],
+      get $$color() {
+        return (
+          currentColor ||
+          {
+            [ColorThemeKind.Dark]: 'white',
+            [ColorThemeKind.HighContrast]: 'white',
+            [ColorThemeKind.Light]: 'black',
+            [ColorThemeKind.HighContrastLight]: 'black',
+          }[window.activeColorTheme.kind]
+        );
+      },
     };
     if (preset) {
       // 設定のpresetに指定されたsvgのプレゼンテーション属性をコピー
