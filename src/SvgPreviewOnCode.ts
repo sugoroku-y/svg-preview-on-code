@@ -1,21 +1,21 @@
+import { XMLBuilder, XMLParser } from 'fast-xml-parser';
 import {
-  type DecorationOptions,
-  type ExtensionContext,
-  type TextDocument,
-  type TextEditor,
   ColorThemeKind,
   MarkdownString,
   Range,
   WorkspaceConfiguration,
   window,
   workspace,
+  type DecorationOptions,
+  type ExtensionContext,
+  type TextDocument,
+  type TextEditor,
 } from 'vscode';
-import { XMLParser, XMLBuilder } from 'fast-xml-parser';
+import { localeString } from './localeString';
 import {
   isSvgPresentationAttribute,
   type SvgPresentationAttribute,
 } from './SvgPresentationAttribute';
-import { localeString } from './localeString';
 
 /**
  * ユニオン型をインターセクション型に変換します。

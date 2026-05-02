@@ -1,11 +1,11 @@
 // @ts-check
 import eslint from '@eslint/js';
 import eslintPlugin from '@typescript-eslint/eslint-plugin';
-import tseslint from 'typescript-eslint';
-import globals from 'globals';
+import eslintComments from 'eslint-plugin-eslint-comments';
 import * as importPlugin from 'eslint-plugin-import';
 import jsdocPlugin from 'eslint-plugin-jsdoc';
-import eslintComments from 'eslint-plugin-eslint-comments';
+import globals from 'globals';
+import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   eslint.configs.recommended,
@@ -44,7 +44,7 @@ export default tseslint.config(
       '@typescript-eslint/naming-convention': [
         'error',
         // デフォルト設定
-        ...eslintPlugin.rules['naming-convention'].defaultOptions,
+        ...(eslintPlugin.rules['naming-convention'].meta.defaultOptions ?? []),
         // カスタマイズ設定
         {
           // クォートする必要のあるプロパティは命名規則から除外
@@ -164,16 +164,10 @@ export default tseslint.config(
       'import/order': [
         'warn',
         {
-          pathGroups: [
-            {
-              pattern: 'vscode',
-              group: 'external',
-              position: 'before',
-            },
-          ],
-          pathGroupsExcludedImportTypes: ['vscode'],
+          groups: [['builtin', 'external']],
           alphabetize: {
             order: 'asc',
+            caseInsensitive: true,
           },
           'newlines-between': 'never',
         },
